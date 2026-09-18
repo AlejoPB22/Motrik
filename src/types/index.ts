@@ -6,7 +6,7 @@ export interface Usuario {
 }
 
 export interface Cliente extends Usuario {
-  // Propiedades específicas de cliente
+  vehiculos_registrados?: number;
 }
 
 export interface Mecanico extends Usuario {
