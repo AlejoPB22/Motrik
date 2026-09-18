@@ -1,39 +1,40 @@
+export type RolUsuario = 'cliente' | 'mecanico' | 'admin';
+
 export interface Usuario {
-  id: number;
+  id: string; // uuid
   nombre: string;
   correo: string;
+  rol: RolUsuario;
+  created_at: string;
   // contrasena: string; // Generally not exposed to the client
 }
 
-export interface Cliente extends Usuario {
-  vehiculos_registrados?: number;
-}
-
+// Mecánico extiende los atributos base de un usuario (cuando rol === 'mecanico')
 export interface Mecanico extends Usuario {
-  especialidad: string;
-  ubicacion: string;
+  especialidad: string | null;
+  ubicacion: string | null;
   calificacion_promedio: number;
 }
 
 export interface Vehiculo {
-  id: number;
+  id: number; // bigint identity
   marca: string;
   modelo: string;
   ano: number;
-  cliente_id: number; // Foráneo
+  usuario_id: string; // Foráneo -> Usuario.id (uuid)
 }
 
 export interface Valoracion {
-  id: number;
+  id: number; // bigint identity
   puntuacion: number;
-  comentario: string;
-  fecha: Date;
-  mecanico_id: number; // Foráneo
-  cliente_id: number; // Foráneo
+  comentario: string | null;
+  fecha: string;
+  cliente_id: string; // Foráneo -> Usuario.id (uuid)
+  mecanico_id: string; // Foráneo -> Mecanico.id (uuid)
 }
 
 export interface Repuesto {
-  id: number;
+  id: number; // bigint identity
   nombre: string;
   categoria_vehiculo: string;
   precio: number;
@@ -41,10 +42,10 @@ export interface Repuesto {
 }
 
 export interface RegistroBitacora {
-  id: number;
-  fecha: Date;
+  id: number; // bigint identity
+  fecha: string;
   descripcion_cambio: string;
-  pieza_actualizada: string;
-  vehiculo_id: number; // Foráneo
-  repuesto_id?: number; // Opcional, Foráneo
+  pieza_actualizada: string | null;
+  vehiculo_id: number; // Foráneo -> Vehiculo.id (bigint)
+  repuesto_id: number | null; // Opcional, Foráneo -> Repuesto.id (bigint)
 }
