@@ -1,0 +1,255 @@
+Diagrama de Casos de Uso
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+' Definición de actores
+actor "Usuario\n(Propietario de vehículo)" as Usuario
+actor "Sistema Motrick\n(Gestión y Simulaciones)" as Sistema
+
+' Límite del sistema definido por un rectángulo
+rectangle "Motrick (MVP)" {
+  usecase "Filtrar mecánicos y talleres" as UC1
+  usecase "Consultar valoraciones" as UC2
+  usecase "Buscar repuestos" as UC3
+  usecase "Simular compra de repuestos" as UC4
+  usecase "Registrar mantenimientos" as UC5
+  usecase "Consultar historial de piezas" as UC6
+}
+
+' Relaciones del Actor Primario (Izquierda)
+Usuario -- UC1
+Usuario -- UC2
+Usuario -- UC3
+Usuario -- UC4
+Usuario -- UC5
+Usuario -- UC6
+
+' Relaciones del Actor Secundario (Derecha)
+UC2 -- Sistema
+UC3 -- Sistema
+UC4 -- Sistema
+UC6 -- Sistema
+@enduml
+
+Diagrama de Clases
+@startuml
+skinparam classAttributeIconSize 0
+hide empty members
+
+' 1. CLASE ABSTRACTA
+abstract class Usuario {
+  - id: Integer
+  - nombre: String
+  - correo: String
+  - contrasena: String
+  + iniciarSesion(): Boolean
+}
+
+' 2. SUBCLASES QUE HEREDAN DE USUARIO
+class Cliente {
+  + registrarVehiculo(): void
+}
+
+class Mecanico {
+  - especialidad: String
+  - ubicacion: String
+  - calificacion_promedio: Float
+  + calcularCalificacion(): Float
+  + obtenerEspecialidad(): String
+}
+
+' 3. RESTO DE CLASES DEL SISTEMA
+class Vehiculo {
+  - id: Integer
+  - marca: String
+  - modelo: String
+  - ano: Integer
+  + obtenerHistorial(): List
+  + agregarMantenimiento(): void
+}
+
+class Valoracion {
+  - id: Integer
+  - puntuacion: Integer
+  - comentario: String
+  - fecha: Date
+}
+
+class Repuesto {
+  - id: Integer
+  - nombre: String
+  - categoria_vehiculo: String
+  - precio: Float
+  - compatibilidad: String
+  + consultarCompatibilidad(): Boolean
+}
+
+class RegistroBitacora {
+  - id: Integer
+  - fecha: Date
+  - descripcion_cambio: String
+  - pieza_actualizada: String
+  + registrarFecha(): void
+  + vincularRepuesto(): void
+}
+
+' --- RELACIONES UML ---
+Usuario <|-- Cliente
+Usuario <|-- Mecanico
+
+Cliente "1" -- "1..*" Vehiculo : posee >
+Cliente "1" -- "0..*" Valoracion : emite >
+Mecanico "1" -- "0..*" Valoracion : recibe >
+
+Vehiculo "1" *-- "0..*" RegistroBitacora : contiene >
+RegistroBitacora "0..*" o-- "0..1" Repuesto : incluye >
+@enduml
+
+Diagramas de Secuencia
+Búsqueda de un repuesto por vehículo:
+@startuml
+skinparam maxMessageSize 150
+actor Usuario
+participant "Interfaz\n(React/Next.js)" as Frontend
+participant "Backend\n(Next.js API)" as Backend
+database "Base de Datos\n(Supabase)" as BD
+
+Usuario -> Frontend: Ingresa datos del vehículo (Buscador)
+activate Frontend
+
+Frontend -> Backend: Petición GET (Búsqueda de repuestos)
+activate Backend
+
+Backend -> BD: Ejecuta query por nicho específico
+activate BD
+
+BD --> Backend: Retorna componentes correspondientes
+deactivate BD
+
+Backend --> Frontend: Envía datos JSON formateados
+deactivate Backend
+
+Frontend --> Usuario: Muestra catálogo categorizado
+deactivate Frontend
+@enduml
+
+Registro en la Bitácora de Mantenimiento:
+@startuml
+skinparam maxMessageSize 150
+actor Usuario
+participant "Interfaz\n(React)" as Frontend
+participant "Backend\n(Next.js API)" as Backend
+database "Base de Datos\n(Supabase)" as BD
+
+Usuario -> Frontend: Completa formulario (pieza, fecha) y envía
+activate Frontend
+
+Frontend -> Backend: Petición POST (Nuevo registro)
+activate Backend
+
+Backend -> Backend: Valida sesión del usuario (Seguridad Supabase)
+
+Backend -> BD: INSERT en tabla de bitácora
+activate BD
+
+BD --> Backend: Confirma inserción exitosa
+deactivate BD
+
+Backend --> Frontend: Retorna status 200 (Éxito)
+deactivate Backend
+
+Frontend --> Usuario: Actualiza vista del control histórico
+deactivate Frontend
+@enduml
+
+Simulación de compra de repuestos (Mockup):
+@startuml
+skinparam maxMessageSize 150
+actor Usuario
+participant "Interfaz\n(React)" as Frontend
+
+Usuario -> Frontend: Selecciona repuesto y hace clic en "Comprar"
+activate Frontend
+
+Frontend --> Usuario: Despliega maqueta de pasarela de pago
+
+Usuario -> Frontend: Ingresa datos de prueba (tarjeta simulada)
+
+Frontend -> Frontend: Simula tiempo de procesamiento interno\n(Sin APIs financieras externas)
+
+Frontend --> Usuario: Muestra pantalla de éxito de transacción
+deactivate Frontend
+@enduml
+Diagrama de Actividades
+@startuml
+' Nodo inicial
+start
+
+' Acciones principales
+:Seleccionar el vehículo al que se le realizó el cambio;
+:Ingresar los detalles del mantenimiento y la fecha;
+
+' Nodo de decisión (Rombo)
+if (¿El mantenimiento incluye instalación de pieza nueva?) then (Sí)
+  :Buscar e identificar la pieza actualizada en el sistema;
+else (No)
+  :Omitir vinculación de pieza;
+endif
+
+' Continuación del flujo unificado
+:Guardar registro;
+:El sistema actualiza el control histórico de la bitácora;
+
+' Nodo final
+stop
+@enduml
+Diagrama de Componentes
+@startuml
+left to right direction
+skinparam componentStyle uml2
+
+' Representación de Caja Blanca (White Box)
+component "Interfaz de Usuario\n(Frontend Next.js / React)" as Frontend {
+  component "Módulo Directorio" as Dir
+  component "Módulo Buscador" as Bus
+  component "Módulo Bitácora" as Bit
+}
+
+' Representación de Caja Negra (Black Box)
+component "Lógica de Servidor\n(Backend Next.js API)" as Backend
+component "Gestión y Persistencia\n(Supabase / PostgreSQL)" as DataBase
+
+' Relaciones de interfaz requerida y provista
+Frontend -(0- Backend : " HTTP / REST (API) "
+Backend -(0- DataBase : " SDK Supabase "
+
+@enduml
+Diagrama de Despliegue
+@startuml
+left to right direction
+skinparam node {
+    BackgroundColor White
+    BorderColor Black
+}
+
+' Nodos y sus artefactos
+node "Dispositivo Cliente" <<device>> as Cliente {
+  artifact "Frontend Renderizado\n(Navegador / App)" as Frontend
+}
+
+node "Servidor Cloud (Ej. Vercel)" <<execution environment>> as Servidor {
+  artifact "Recursos Estáticos\n(React)" as React
+  artifact "Entorno de Ejecución\n(Node.js / Endpoints)" as Nodejs
+}
+
+node "Infraestructura Supabase (BaaS)" <<execution environment>> as Supabase {
+  artifact "Componentes de\nAutenticación" as Auth
+  artifact "Instancia PostgreSQL" as DB
+}
+
+' Rutas de comunicación con estereotipos de protocolo
+Cliente -- Servidor : <<HTTPS>>
+Servidor -- Supabase : <<TCP/IP / API Nativa>>
+
+@enduml
