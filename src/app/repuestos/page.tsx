@@ -8,11 +8,104 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CATALOG, CATEGORIES, PARTS, cop, fitsVehicle, type Brand, type Part } from "@/data/mock";
+import { CATALOG, CATEGORIES, PARTS, cop, fitsVehicle, type Brand, type Category, type Part } from "@/data/mock";
 import { useApp } from "@/lib/store";
 import { Chip, Img, PageHeader, Stars } from "@/components/motrick/shared";
 import { Checkout } from "@/components/motrick/Checkout";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/utils/supabase/client";
+
+function getPartFallbackImage(category: string): string {
+  const c = (category || "").toLowerCase();
+  if (c.includes("freno")) return "/assets/brake.jpg";
+  if (c.includes("aceite") || c.includes("lubricante")) return "/assets/oil.jpg";
+  if (c.includes("bater") || c.includes("eléctr") || c.includes("electr")) return "/assets/battery.jpg";
+  if (c.includes("suspens")) return "/assets/disc.jpg";
+  if (c.includes("filtro")) return "/assets/engine.jpg";
+  return "/assets/engine.jpg";
+}
+
+function parseDbFits(compatText: string): { brand: Brand; model: string; years: number[] }[] {
+  if (!compatText) return [];
+  const results: { brand: Brand; model: string; years: number[] }[] = [];
+  const brands: Brand[] = ["Toyota", "Mazda", "Chevrolet", "Ford", "Renault", "Kia"];
+  const lower = compatText.toLowerCase();
+
+  for (const b of brands) {
+    if (lower.includes(b.toLowerCase())) {
+      const models = Object.keys(CATALOG[b] || {});
+      let matched = false;
+      for (const m of models) {
+        if (lower.includes(m.toLowerCase())) {
+          results.push({
+            brand: b,
+            model: m,
+            years: CATALOG[b][m] || [2018, 2019, 2020, 2021, 2022, 2023],
+          });
+          matched = true;
+        }
+      }
+      if (!matched && models[0]) {
+        results.push({
+          brand: b,
+          model: models[0],
+          years: CATALOG[b][models[0]] || [2018, 2019, 2020, 2021, 2022, 2023],
+        });
+      }
+    }
+  }
+
+  if (results.length === 0 && lower.includes("universal")) {
+    for (const b of brands) {
+      for (const m of Object.keys(CATALOG[b])) {
+        results.push({ brand: b, model: m, years: CATALOG[b][m] });
+      }
+    }
+  }
+  return results;
+}
+
+interface DbRepuesto {
+  id: number | string;
+  nombre?: string;
+  marca?: string;
+  categoria_vehiculo?: string;
+  precio: number | string;
+  precio_anterior?: number | string | null;
+  calificacion?: number;
+  resenas_count?: number;
+  stock?: number;
+  imagen_url?: string | null;
+  imagenes?: string[] | null;
+  compatibilidad?: string;
+  especificaciones?: Record<string, string> | null;
+  envio_gratis?: boolean | null;
+}
+
+function mapDbRepuestoToPart(item: DbRepuesto): Part {
+  const category = (item.categoria_vehiculo || "Motor") as Category;
+  const image = item.imagen_url || getPartFallbackImage(category);
+  const compat = String(item.compatibilidad || "Universal");
+  const fits = parseDbFits(compat);
+
+  return {
+    id: String(item.id),
+    name: item.nombre || "Repuesto Automotriz",
+    brand: item.marca || "Original OEM",
+    category,
+    price: Number(item.precio) || 0,
+    oldPrice: item.precio_anterior ? Number(item.precio_anterior) : undefined,
+    rating: Number(item.calificacion) || 4.8,
+    reviews: Number(item.resenas_count) || 85,
+    stock: Number(item.stock) || 15,
+    images: item.imagenes ? (Array.isArray(item.imagenes) ? item.imagenes : [item.imagenes]) : [image],
+    fits,
+    specs: typeof item.especificaciones === "object" && item.especificaciones !== null
+      ? item.especificaciones
+      : { Compatibilidad: compat, "Categoría Vehicular": category, Garantía: "12 meses" },
+    freeShipping: item.envio_gratis ?? (Number(item.precio) >= 150000),
+  };
+}
 
 export default function RepuestosPage() {
   return (
@@ -36,6 +129,7 @@ function RepuestosContent() {
   const [onlyFit, setOnlyFit] = useState(true);
   const [loading, setLoading] = useState(true);
   const [checkout, setCheckout] = useState<{ part: Part; qty: number } | null>(null);
+  const [parts, setParts] = useState<Part[]>(PARTS);
 
   useEffect(() => {
     setBrand(active.brand);
@@ -43,22 +137,82 @@ function RepuestosContent() {
     setYear(String(active.year));
   }, [active]);
 
+  // Consulta SELECT a la tabla 'repuestos' en Supabase con filtros dinámicos
   useEffect(() => {
-    setLoading(true);
-    const t = setTimeout(() => setLoading(false), 350);
-    return () => clearTimeout(t);
-  }, [brand, model, year, cat, sort, onlyFit]);
+    let activeEffect = true;
+    async function loadRepuestos() {
+      setLoading(true);
+      try {
+        const supabase = createClient();
+        let query = supabase.from("repuestos").select("*");
 
-  const filterV = brand && model && year ? { brand, model, year: Number(year) } : null;
+        // Filtro por categoría en Supabase
+        if (cat) {
+          query = query.ilike("categoria_vehiculo", `%${cat}%`);
+        }
+
+        // Filtro por compatibilidad en Supabase cuando se activa 'Solo compatibles'
+        if (onlyFit && model) {
+          query = query.or(`compatibilidad.ilike.%${model}%,compatibilidad.ilike.%Universal%`);
+        }
+
+        const { data, error } = await query;
+
+        if (!activeEffect) return;
+
+        if (error) {
+          console.warn("Aviso al consultar 'repuestos' en Supabase (usando datos de respaldo):", error.message);
+          // Si hay error en Supabase o tabla vacía, mantener datos mock para no dejar en blanco
+          setParts(PARTS);
+        } else if (data && data.length > 0) {
+          const mapped = data.map(mapDbRepuestoToPart);
+          setParts(mapped);
+        } else {
+          // Si el filtro no produjo resultados en DB
+          if (cat || (onlyFit && model)) {
+            setParts([]);
+          } else {
+            setParts(PARTS);
+          }
+        }
+      } catch (e) {
+        console.error("Error en la conexión con Supabase:", e);
+        if (activeEffect) setParts(PARTS);
+      } finally {
+        if (activeEffect) setLoading(false);
+      }
+    }
+
+    loadRepuestos();
+    return () => {
+      activeEffect = false;
+    };
+  }, [cat, model, onlyFit]);
+
+  const filterV = useMemo(() => {
+    return brand && model && year ? { brand, model, year: Number(year) } : null;
+  }, [brand, model, year]);
   const list = useMemo(() => {
-    let l = PARTS.filter((p) => (!cat || p.category === cat) && (!onlyFit || !filterV || fitsVehicle(p, filterV)));
+    let l = parts.filter((p) => {
+      const matchCat = !cat || p.category.toLowerCase() === cat.toLowerCase();
+      const matchCompat =
+        !onlyFit ||
+        !filterV ||
+        fitsVehicle(p, filterV) ||
+        (p.specs?.Compatibilidad && (
+          p.specs.Compatibilidad.toLowerCase().includes(filterV.model.toLowerCase()) ||
+          p.specs.Compatibilidad.toLowerCase().includes("universal")
+        ));
+      return matchCat && matchCompat;
+    });
+
     if (sort === "low") l = [...l].sort((a, b) => a.price - b.price);
     if (sort === "high") l = [...l].sort((a, b) => b.price - a.price);
     if (sort === "rating") l = [...l].sort((a, b) => b.rating - a.rating);
     return l;
-  }, [cat, sort, onlyFit, filterV?.brand, filterV?.model, filterV?.year]);
+  }, [parts, cat, sort, onlyFit, filterV]);
 
-  const selected = PARTS.find((p) => p.id === partParam) ?? null;
+  const selected = parts.find((p) => String(p.id) === String(partParam)) ?? PARTS.find((p) => String(p.id) === String(partParam)) ?? null;
 
   return (
     <div>
