@@ -28,6 +28,7 @@ import { useApp } from "@/lib/store";
 import { Img, PageHeader } from "@/components/motrick/shared";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
+import { SponsoredCard, SPONSORED_ADS } from "@/components/motrick/SponsoredCard";
 
 const km = (n: number) => `${n.toLocaleString("es-CO")} km`;
 
@@ -401,6 +402,9 @@ export default function BitacoraPage() {
               </div>
             )}
           </div>
+
+          {/* Anuncio nativo y contextual automotriz (RNF-04) */}
+          <SponsoredCard {...SPONSORED_ADS.cdaRevision} />
         </div>
 
         <section>

@@ -2,7 +2,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { BadgeCheck, Clock, MapPin, Phone, Star } from "lucide-react";
+import { BadgeCheck, Clock, MapPin, Phone, ShieldCheck, Star } from "lucide-react";
 import { Suspense, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,6 +12,7 @@ import { Chip, Img, PageHeader, Stars } from "@/components/motrick/shared";
 import { toast } from "sonner";
 import { createClient } from "@/utils/supabase/client";
 import { useEffect } from "react";
+import { SponsoredCard, SPONSORED_ADS } from "@/components/motrick/SponsoredCard";
 
 function getWorkshopImage(especialidad?: string | null): string {
   const s = (especialidad || "").toLowerCase();
@@ -134,6 +135,8 @@ function DirectorioContent() {
   const [specs, setSpecs] = useState<Specialty[]>([]);
   const [zone, setZone] = useState("all");
   const [top, setTop] = useState(false);
+  const [onlyVerified, setOnlyVerified] = useState(false);
+  const [openVerification, setOpenVerification] = useState(false);
   const [workshops, setWorkshops] = useState<Workshop[]>(WORKSHOPS);
   const [loading, setLoading] = useState(true);
 
@@ -213,10 +216,11 @@ function DirectorioContent() {
       workshops.filter((w) => {
         const matchZone = zone === "all" || w.zone.toLowerCase().includes(zone.toLowerCase());
         const matchTop = !top || w.rating >= 4;
+        const matchVerified = !onlyVerified || w.verified;
         const matchSpecs = specs.length === 0 || specs.every((s) => w.specialties.some((ws) => ws.toLowerCase().includes(s.toLowerCase())));
-        return matchZone && matchTop && matchSpecs;
+        return matchZone && matchTop && matchVerified && matchSpecs;
       }),
-    [workshops, specs, zone, top],
+    [workshops, specs, zone, top, onlyVerified],
   );
 
   const selected = workshops.find((w) => String(w.id) === String(shopParam)) ?? WORKSHOPS.find((w) => String(w.id) === String(shopParam)) ?? null;
@@ -228,7 +232,16 @@ function DirectorioContent() {
         eyebrow="Directorio"
         title="Talleres y mecánicos verificados"
         subtitle="Talleres evaluados por la comunidad de conductores Motrick en Bogotá."
-      />
+      >
+        <Button
+          variant="outline"
+          size="lg"
+          className="h-11 rounded-full gap-2 border-primary/40 hover:border-primary"
+          onClick={() => setOpenVerification(true)}
+        >
+          <ShieldCheck className="h-4 w-4 text-primary" /> Soy Mecánico / Verificar Taller
+        </Button>
+      </PageHeader>
 
       <div className="mb-6 space-y-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
         <div className="flex gap-2 overflow-x-auto pb-0.5">
@@ -248,9 +261,12 @@ function DirectorioContent() {
           <Chip active={top} onClick={() => setTop(!top)}>
             <Star className="h-3.5 w-3.5 mr-1" /> 4+ estrellas
           </Chip>
-          {(specs.length > 0 || zone !== "all" || top) && (
+          <Chip active={onlyVerified} onClick={() => setOnlyVerified(!onlyVerified)}>
+            <BadgeCheck className="h-3.5 w-3.5 mr-1 text-primary" /> Solo verificados
+          </Chip>
+          {(specs.length > 0 || zone !== "all" || top || onlyVerified) && (
             <button
-              onClick={() => { setSpecs([]); setZone("all"); setTop(false); }}
+              onClick={() => { setSpecs([]); setZone("all"); setTop(false); setOnlyVerified(false); }}
               className="ml-auto text-sm font-medium text-primary hover:underline"
             >
               Limpiar filtros
@@ -386,6 +402,102 @@ function DirectorioContent() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Publicidad Nativa Contextual Automotriz (RNF-04) */}
+      <div className="mt-12 pt-6 border-t border-border/60">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Alianzas y Servicios de Movilidad
+          </p>
+          <span className="text-[10px] text-muted-foreground">Publicidad transparente · Ley 1480</span>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <SponsoredCard {...SPONSORED_ADS.telepeaje} />
+          <SponsoredCard {...SPONSORED_ADS.soatSeguros} />
+        </div>
+      </div>
+
+      <VerificationRequestModal
+        open={openVerification}
+        onOpenChange={setOpenVerification}
+      />
     </div>
+  );
+}
+
+function VerificationRequestModal({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+  const [name, setName] = useState("");
+  const [rut, setRut] = useState("");
+  const [address, setAddress] = useState("");
+  const [phone, setPhone] = useState("");
+  const [specialty, setSpecialty] = useState("Frenos");
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !rut.trim()) {
+      toast.error("Por favor completa los datos comerciales obligatorios.");
+      return;
+    }
+    toast.success("Solicitud de Verificación enviada (RF-05)", {
+      description: `El equipo de Motrick validará el RUT ${rut} y la sede física en menos de 24h.`,
+    });
+    setName("");
+    setRut("");
+    setAddress("");
+    setPhone("");
+    onOpenChange(false);
+  };
+
+  const inputCls = "h-11 w-full rounded-lg border border-input bg-card px-3.5 text-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10";
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogTitle className="text-xl flex items-center gap-2">
+          <ShieldCheck className="h-5 w-5 text-primary" /> Verificación de Taller (RF-05)
+        </DialogTitle>
+        <p className="-mt-2 text-sm text-muted-foreground">
+          Obtén la insignia de Taller Verificado y posiciónate prioritariamente ante miles de conductores en Bogotá.
+        </p>
+
+        <form onSubmit={handleSubmit} className="space-y-3.5 pt-2">
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block mb-1">Razón Social o Nombre Comercial</label>
+            <input className={inputCls} placeholder="Ej. Torque Automotriz S.A.S." value={name} onChange={(e) => setName(e.target.value)} required />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block mb-1">NIT o RUT Comercial (DIAN)</label>
+            <input className={inputCls} placeholder="Ej. 901.234.567-8" value={rut} onChange={(e) => setRut(e.target.value)} required />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground block mb-1">Dirección Física</label>
+              <input className={inputCls} placeholder="Cra / Calle #" value={address} onChange={(e) => setAddress(e.target.value)} required />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground block mb-1">Teléfono Móvil</label>
+              <input className={inputCls} placeholder="+57 300..." value={phone} onChange={(e) => setPhone(e.target.value)} required />
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-muted-foreground block mb-1">Especialidad Principal</label>
+            <select className={inputCls} value={specialty} onChange={(e) => setSpecialty(e.target.value)}>
+              {SPECIALTIES.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+          <p className="text-[11px] text-muted-foreground leading-snug">
+            Nota legal: Al enviar este formulario declaras cumplir con los estándares técnicos y la idoneidad exigida por la Ley 1480 de 2011.
+          </p>
+          <div className="flex gap-2 pt-2">
+            <Button type="button" variant="outline" size="lg" className="h-11 flex-1" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="submit" variant="cta" size="lg" className="h-11 flex-1">
+              Enviar Solicitud
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

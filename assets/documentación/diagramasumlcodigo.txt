@@ -1,36 +1,61 @@
-Diagrama de Casos de Uso
-@startuml
+Diagrama de Casos de Uso (Actualizado con RF-05 y Modelo de Negocio)
+@startuml Motrick_Casos_Uso_Actualizado
 left to right direction
 skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam handwritten false
 
-' Definición de actores
-actor "Usuario\n(Propietario de vehículo)" as Usuario
-actor "Sistema Motrick\n(Gestión y Simulaciones)" as Sistema
+' Actores
+actor "Usuario\n(Propietario)" as User
+actor "Mecánico / Taller" as Mech
+actor "Administrador\n(Equipo Motrick)" as Admin
+actor "Sistema Motrick\n(Gestión DB)" as Sys
 
-' Límite del sistema definido por un rectángulo
-rectangle "Motrick (MVP)" {
-  usecase "Filtrar mecánicos y talleres" as UC1
-  usecase "Consultar valoraciones" as UC2
-  usecase "Buscar repuestos" as UC3
-  usecase "Simular compra de repuestos" as UC4
-  usecase "Registrar mantenimientos" as UC5
-  usecase "Consultar historial de piezas" as UC6
+rectangle "Plataforma Motrick (MVP)" {
+  ' Módulo Repuestos
+  usecase "Buscar repuestos por vehículo" as UC_Repuestos
+  usecase "Simular compra de repuestos" as UC_Checkout
+
+  ' Módulo Directorio & Verificación
+  usecase "Filtrar mecánicos y talleres" as UC_Directorio
+  usecase "Consultar valoraciones y reseñas" as UC_Valoraciones
+  usecase "Solicitar verificación de taller" as UC_SolicitarVerif
+
+  ' Módulo Bitácora
+  usecase "Registrar mantenimiento en bitácora" as UC_RegistrarBitacora
+  usecase "Vincular repuesto del catálogo" as UC_VincularPieza
+  usecase "Consultar historial vehicular" as UC_Historial
+
+  ' Gestión y Administración
+  usecase "Gestionar Catálogo y Directorio" as UC_GestionCatalogo
+  usecase "Verificar y aprobar talleres" as UC_AprobarTaller
 }
 
-' Relaciones del Actor Primario (Izquierda)
-Usuario -- UC1
-Usuario -- UC2
-Usuario -- UC3
-Usuario -- UC4
-Usuario -- UC5
-Usuario -- UC6
+' Relaciones del Usuario Propietario
+User --> UC_Repuestos
+User --> UC_Directorio
+User --> UC_Valoraciones
+User --> UC_RegistrarBitacora
+User --> UC_Historial
 
-' Relaciones del Actor Secundario (Derecha)
-UC2 -- Sistema
-UC3 -- Sistema
-UC4 -- Sistema
-UC6 -- Sistema
+' Relaciones internas (include / extend)
+UC_Checkout .> UC_Repuestos : <<extend>>
+UC_VincularPieza .> UC_RegistrarBitacora : <<extend>>
+
+' Relaciones del Mecánico / Taller
+Mech --> UC_SolicitarVerif
+
+' Relaciones del Administrador
+Admin --> UC_GestionCatalogo
+Admin --> UC_AprobarTaller
+
+' Interacción con el Sistema / Backend
+UC_Repuestos --> Sys
+UC_Directorio --> Sys
+UC_RegistrarBitacora --> Sys
+UC_AprobarTaller --> Sys
 @enduml
+
 
 Diagrama de Clases
 @startuml
