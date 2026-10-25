@@ -3,11 +3,14 @@
 Script para compilar y generar el documento final de entrega académica en PDF
 Proyecto: Motrik (MVP Final - Tercer Corte)
 Universidad Tecnológica de Bolívar - 2026
+Autores: Alejandro David Paternina Bermejo (T00078032) y Johan Sebastian Brieva Fernandez (T00077809)
+Docente: Aisner Jose Marrugo Juliao
 """
 
 import os
 import subprocess
 import base64
+import pypdf
 
 def get_base64_image(image_path):
     if os.path.exists(image_path):
@@ -20,7 +23,17 @@ def get_base64_image(image_path):
 
 def build_html():
     logo_b64 = get_base64_image("assets/documentación/img_uml/page_1_Im1.png")
-    trello_b64 = get_base64_image("assets/Trello.png")
+    trello_b64 = get_base64_image("assets/Trello_sharp.png")
+    if not trello_b64:
+        trello_b64 = get_base64_image("assets/Trello.png")
+
+    clases_b64 = get_base64_image("assets/documentación/img_uml/page_3_Im3.png")
+    sec1_b64 = get_base64_image("assets/documentación/img_uml/page_4_Im4.png")
+    sec2_b64 = get_base64_image("assets/documentación/img_uml/page_5_Im5.png")
+    sec3_b64 = get_base64_image("assets/documentación/img_uml/page_6_Im6.png")
+    act_b64 = get_base64_image("assets/documentación/img_uml/page_7_Im7.png")
+    comp_b64 = get_base64_image("assets/documentación/img_uml/page_8_Im8.png")
+    desp_b64 = get_base64_image("assets/documentación/img_uml/page_8_Im9.png")
 
     html = f"""<!DOCTYPE html>
 <html lang="es">
@@ -30,7 +43,7 @@ def build_html():
 <style>
   @page {{
     size: letter;
-    margin: 22mm 18mm 22mm 18mm;
+    margin: 20mm 18mm 20mm 18mm;
     @bottom-center {{
       content: counter(page);
       font-family: 'Segoe UI', Helvetica, Arial, sans-serif;
@@ -47,7 +60,7 @@ def build_html():
 
   body {{
     font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif;
-    font-size: 10.5pt;
+    font-size: 10pt;
     line-height: 1.55;
     color: #1e293b;
     background: #ffffff;
@@ -62,12 +75,12 @@ def build_html():
     flex-direction: column;
     justify-content: space-between;
     height: 100vh;
-    padding: 25mm 15mm 20mm 15mm;
+    padding: 22mm 15mm 18mm 15mm;
     text-align: center;
   }}
 
   .cover-header img {{
-    max-height: 80px;
+    max-height: 75px;
     margin-bottom: 12px;
   }}
 
@@ -95,8 +108,8 @@ def build_html():
   }}
 
   .cover-title-box {{
-    margin: 40px 0;
-    padding: 24px;
+    margin: 36px 0;
+    padding: 22px;
     border-top: 3px solid #2563eb;
     border-bottom: 3px solid #2563eb;
     background: #f8fafc;
@@ -112,7 +125,7 @@ def build_html():
   }}
 
   .cover-title {{
-    font-size: 20pt;
+    font-size: 21pt;
     font-weight: 800;
     color: #090d16;
     line-height: 1.25;
@@ -120,14 +133,15 @@ def build_html():
   }}
 
   .cover-subtitle {{
-    font-size: 11.5pt;
+    font-size: 11pt;
     font-weight: 500;
     color: #475569;
     margin-top: 10px;
+    line-height: 1.4;
   }}
 
   .cover-meta {{
-    margin-top: 20px;
+    margin-top: 16px;
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
@@ -148,79 +162,68 @@ def build_html():
   }}
 
   .cover-meta-col p {{
-    margin: 2px 0;
-    font-size: 10.5pt;
-    font-weight: 600;
-    color: #1e293b;
+    margin: 0;
+    font-size: 10pt;
+    color: #0f172a;
+    line-height: 1.45;
   }}
 
   .cover-meta-col span {{
     font-size: 9pt;
     color: #64748b;
-    font-weight: normal;
   }}
 
   .cover-footer {{
+    margin-top: 25px;
     font-size: 9.5pt;
     color: #64748b;
-    border-top: 1px solid #e2e8f0;
-    padding-top: 12px;
+    font-weight: 500;
   }}
 
-  /* Estructura del cuerpo */
-  .page-break {{
-    page-break-before: always;
-  }}
-
+  /* Encabezados y Tipografía */
   h1 {{
-    font-size: 16pt;
+    font-size: 15.5pt;
     font-weight: 800;
     color: #0f172a;
     border-bottom: 2px solid #2563eb;
-    padding-bottom: 6px;
-    margin-top: 28px;
-    margin-bottom: 14px;
+    padding-bottom: 5px;
+    margin-top: 24px;
+    margin-bottom: 12px;
     page-break-after: avoid;
   }}
 
   h2 {{
-    font-size: 13pt;
+    font-size: 12.5pt;
     font-weight: 700;
-    color: #1e293b;
-    margin-top: 20px;
-    margin-bottom: 10px;
+    color: #1e3a8a;
+    margin-top: 18px;
+    margin-bottom: 8px;
     page-break-after: avoid;
   }}
 
   h3 {{
     font-size: 11pt;
-    font-weight: 700;
+    font-weight: 600;
     color: #334155;
-    margin-top: 16px;
+    margin-top: 14px;
     margin-bottom: 6px;
     page-break-after: avoid;
   }}
 
-  h4 {{
-    font-size: 10.5pt;
-    font-weight: 700;
-    color: #475569;
-    margin-top: 12px;
-    margin-bottom: 4px;
-    page-break-after: avoid;
+  p {{
+    margin-top: 0;
+    margin-bottom: 10px;
+    text-align: justify;
   }}
 
-  p, li {{
-    text-align: justify;
-    text-justify: inter-word;
-    margin-top: 0;
-    margin-bottom: 8px;
+  .page-break {{
+    page-break-after: always;
   }}
 
   ul, ol {{
     margin-top: 4px;
-    margin-bottom: 12px;
-    padding-left: 22px;
+    margin-bottom: 10px;
+    padding-left: 20px;
   }}
 
   li {{
@@ -231,14 +234,14 @@ def build_html():
   table {{
     width: 100%;
     border-collapse: collapse;
-    margin: 14px 0;
-    font-size: 9.5pt;
+    margin: 12px 0;
+    font-size: 9pt;
     page-break-inside: avoid;
   }}
 
   th, td {{
     border: 1px solid #cbd5e1;
-    padding: 7px 10px;
+    padding: 6px 9px;
     vertical-align: top;
     text-align: left;
   }}
@@ -254,20 +257,40 @@ def build_html():
   }}
 
   /* Fichas de Requerimientos */
+  .req-box {{
+    margin-bottom: 18px;
+    page-break-inside: avoid;
+  }}
+
+  .req-box-header {{
+    font-size: 9.5pt;
+    font-weight: 700;
+    color: #1e3a8a;
+    background: #e0f2fe;
+    border: 1px solid #93c5fd;
+    border-bottom: none;
+    padding: 5px 10px;
+    border-radius: 4px 4px 0 0;
+  }}
+
   .req-table {{
-    margin-bottom: 16px;
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    margin: 0 0 4px 0;
     border: 1.5px solid #94a3b8;
   }}
 
   .req-table th {{
     width: 25%;
-    background-color: #e2e8f0;
+    background-color: #f1f5f9;
     color: #1e293b;
     font-weight: 700;
   }}
 
   .req-table td {{
     width: 75%;
+    background-color: #ffffff;
   }}
 
   /* Cuadros de texto y alertas */
@@ -275,7 +298,7 @@ def build_html():
     background: #f8fafc;
     border-left: 4px solid #2563eb;
     padding: 10px 14px;
-    margin: 12px 0;
+    margin: 10px 0;
     border-radius: 0 6px 6px 0;
     font-size: 9.5pt;
     page-break-inside: avoid;
@@ -295,17 +318,19 @@ def build_html():
 
   /* Fragmentos de código */
   pre, code {{
-    font-family: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+    font-family: 'Consolas', 'Courier New', monospace;
     font-size: 8.5pt;
+    font-variant-ligatures: none;
+    -webkit-font-feature-settings: "liga" 0;
   }}
 
   pre {{
     background: #0f172a;
     color: #f8fafc;
-    padding: 10px 12px;
+    padding: 9px 11px;
     border-radius: 6px;
     overflow-x: auto;
-    margin: 10px 0;
+    margin: 8px 0;
     line-height: 1.45;
     page-break-inside: avoid;
   }}
@@ -313,36 +338,78 @@ def build_html():
   .code-inline {{
     background: #f1f5f9;
     color: #0f172a;
-    padding: 2px 5px;
+    padding: 2px 4px;
     border-radius: 4px;
     border: 1px solid #e2e8f0;
   }}
 
+  /* Tablas de Comparación de Código (Defectos) */
   .diff-table {{
     width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
     margin: 10px 0;
-    font-family: monospace;
+    page-break-inside: avoid;
+  }}
+
+  .diff-header-before {{
+    font-weight: 700;
+    color: #991b1b;
+    font-family: 'Segoe UI', sans-serif;
     font-size: 8.5pt;
+    margin-bottom: 6px;
+    display: block;
+  }}
+
+  .diff-header-after {{
+    font-weight: 700;
+    color: #166534;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 8.5pt;
+    margin-bottom: 6px;
+    display: block;
   }}
 
   .diff-before {{
     background: #fef2f2;
-    border-left: 3px solid #ef4444;
+    border: 1px solid #fca5a5;
+    border-left: 4px solid #ef4444;
     padding: 8px 10px;
-    color: #991b1b;
+    vertical-align: top;
   }}
 
   .diff-after {{
     background: #f0fdf4;
-    border-left: 3px solid #10b981;
+    border: 1px solid #86efac;
+    border-left: 4px solid #10b981;
     padding: 8px 10px;
-    color: #166534;
+    vertical-align: top;
+  }}
+
+  .code-snippet {{
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 8pt;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }}
+
+  .snippet-red {{
+    color: #7f1d1d;
+  }}
+
+  .snippet-green {{
+    color: #14532d;
+    font-weight: 600;
   }}
 
   /* Figuras e Imágenes */
   .figure-container {{
     text-align: center;
-    margin: 16px 0;
+    margin: 14px 0;
     page-break-inside: avoid;
   }}
 
@@ -350,11 +417,12 @@ def build_html():
     max-width: 100%;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    image-rendering: -webkit-optimize-contrast;
   }}
 
   .figure-caption {{
-    font-size: 9pt;
+    font-size: 8.5pt;
     color: #475569;
     margin-top: 6px;
     text-align: left;
@@ -371,8 +439,8 @@ def build_html():
     background: #ffffff;
     border: 1px solid #cbd5e1;
     border-radius: 8px;
-    padding: 12px;
-    margin: 10px auto;
+    padding: 10px;
+    margin: 8px auto;
     max-width: 100%;
   }}
 </style>
@@ -416,34 +484,41 @@ def build_html():
 </div>
 
 <!-- ==================== TABLA DE CONTENIDO ==================== -->
-<div>
-  <h1>Tabla de Contenido</h1>
-  <table style="border: none;">
-    <tr style="background: none;"><td style="border: none; font-weight: bold;">1. Propósito del Proyecto de Aula y Marco de Negocio</td><td style="border: none; text-align: right; font-weight: bold;">2</td></tr>
-    <tr style="background: none;"><td style="border: none; padding-left: 20px;">1.1. Descripción del Problema</td><td style="border: none; text-align: right;">2</td></tr>
-    <tr style="background: none;"><td style="border: none; padding-left: 20px;">1.2. Solución Propuesta (Alcance del MVP)</td><td style="border: none; text-align: right;">2</td></tr>
-    <tr style="background: none;"><td style="border: none; padding-left: 20px;">1.3. Alcance y Restricciones Tecnológicas</td><td style="border: none; text-align: right;">2</td></tr>
-    <tr style="background: none;"><td style="border: none; padding-left: 20px;">1.4. Arquitectura y Tecnologías (Next.js y Supabase)</td><td style="border: none; text-align: right;">3</td></tr>
-    <tr style="background: none;"><td style="border: none; padding-left: 20px;">1.5. Modelo de Negocio y Deslinde de Responsabilidad Legal (Ley 1480 de 2011)</td><td style="border: none; text-align: right;">3</td></tr>
-    <tr style="background: none;"><td style="border: none; padding-left: 20px;">1.5.2. Publicidad Nativa Contextual y Política de Brand Safety (RNF-04)</td><td style="border: none; text-align: right;">4</td></tr>
-    <tr style="background: none;"><td style="border: none; font-weight: bold;">2. Identificación de Interesados (Stakeholders)</td><td style="border: none; text-align: right; font-weight: bold;">5</td></tr>
-    <tr style="background: none;"><td style="border: none; font-weight: bold;">3. Técnicas de Elicitación Aplicadas</td><td style="border: none; text-align: right; font-weight: bold;">6</td></tr>
-    <tr style="background: none;"><td style="border: none; font-weight: bold;">4. Muestras de las Herramientas Utilizadas y Evidencias del Sector</td><td style="border: none; text-align: right; font-weight: bold;">7</td></tr>
-    <tr style="background: none;"><td style="border: none; font-weight: bold;">5. Especificación de Requerimientos de Software (RF-01 a RF-05 y RNF-01 a RNF-04)</td><td style="border: none; text-align: right; font-weight: bold;">9</td></tr>
-    <tr style="background: none;"><td style="border: none; font-weight: bold;">6. Priorización de Requerimientos y Alcance Funcional</td><td style="border: none; text-align: right; font-weight: bold;">12</td></tr>
-    <tr style="background: none;"><td style="border: none; font-weight: bold;">7. Modelado UML y Matriz de Validación Metodológica</td><td style="border: none; text-align: right; font-weight: bold;">13</td></tr>
-    <tr style="background: none;"><td style="border: none; font-weight: bold;">8. Gestión Ágil (FDD) y Control de Versiones</td><td style="border: none; text-align: right; font-weight: bold;">16</td></tr>
-    <tr style="background: none;"><td style="border: none; font-weight: bold;">9. Validación y Pruebas de Software</td><td style="border: none; text-align: right; font-weight: bold;">18</td></tr>
-    <tr style="background: none;"><td style="border: none; padding-left: 20px;">9.1. Reglas de Negocio Acordadas y Datos Semilla</td><td style="border: none; text-align: right;">18</td></tr>
-    <tr style="background: none;"><td style="border: none; padding-left: 20px;">9.2. Matriz de Casos de Prueba Reales Ejecutados (Tabla 1)</td><td style="border: none; text-align: right;">19</td></tr>
-    <tr style="background: none;"><td style="border: none; padding-left: 20px;">9.3. Registro y Corrección de Defectos (D1 y D2)</td><td style="border: none; text-align: right;">20</td></tr>
-    <tr style="background: none;"><td style="border: none; padding-left: 20px;">9.4. Simulación de Cambio y Pruebas de Regresión (Regla R6)</td><td style="border: none; text-align: right;">21</td></tr>
-    <tr style="background: none;"><td style="border: none; padding-left: 20px;">9.5. Revisión Cruzada por Pares y Decisión de Liberación</td><td style="border: none; text-align: right;">22</td></tr>
-    <tr style="background: none;"><td style="border: none; font-weight: bold;">10. Referencias Bibliográficas</td><td style="border: none; text-align: right; font-weight: bold;">23</td></tr>
+<div style="page-break-after: always;">
+  <h1 style="margin-top: 0; margin-bottom: 8px;">Tabla de Contenido</h1>
+  <table style="border: none; width: 100%; font-size: 8.5pt; line-height: 1.25; margin: 0;">
+    <colgroup><col style="width: 88%;"><col style="width: 12%;"></colgroup>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; font-weight: bold;">1. Propósito del Proyecto de Aula y Marco de Negocio</td><td style="border: none; padding: 2px 4px; text-align: right; font-weight: bold;">3</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 18px;">1.1. Descripción del Problema</td><td style="border: none; padding: 2px 4px; text-align: right;">3</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 18px;">1.2. Solución Propuesta (Alcance del MVP)</td><td style="border: none; padding: 2px 4px; text-align: right;">3</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 18px;">1.3. Alcance y Restricciones Tecnológicas</td><td style="border: none; padding: 2px 4px; text-align: right;">3</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 18px;">1.4. Arquitectura y Tecnologías (Next.js y Supabase)</td><td style="border: none; padding: 2px 4px; text-align: right;">4</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 18px;">1.5. Modelo de Negocio y Marco Jurídico Institucional</td><td style="border: none; padding: 2px 4px; text-align: right;">4</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 36px;">1.5.1. Prevención de Solidaridad Jurídica y Portal de Contacto (Art. 53, Ley 1480 de 2011)</td><td style="border: none; padding: 2px 4px; text-align: right;">4</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 36px;">1.5.2. Publicidad Nativa Contextual y Política de Brand Safety (RNF-04)</td><td style="border: none; padding: 2px 4px; text-align: right;">4</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; font-weight: bold;">2. Identificación de Interesados (Stakeholders)</td><td style="border: none; padding: 2px 4px; text-align: right; font-weight: bold;">5</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; font-weight: bold;">3. Técnicas de Elicitación Aplicadas</td><td style="border: none; padding: 2px 4px; text-align: right; font-weight: bold;">5</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; font-weight: bold;">4. Muestras de las Herramientas Utilizadas y Evidencias del Sector</td><td style="border: none; padding: 2px 4px; text-align: right; font-weight: bold;">7</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; font-weight: bold;">5. Especificación de Requerimientos de Software (RF-01 a RF-05 y RNF-01 a RNF-04)</td><td style="border: none; padding: 2px 4px; text-align: right; font-weight: bold;">8</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; font-weight: bold;">6. Priorización de Requerimientos y Alcance Funcional (FDD)</td><td style="border: none; padding: 2px 4px; text-align: right; font-weight: bold;">12</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; font-weight: bold;">7. Modelado UML y Matriz de Validación Metodológica</td><td style="border: none; padding: 2px 4px; text-align: right; font-weight: bold;">14</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 18px;">7.1. Diagrama de Casos de Uso Actualizado (Figura 1)</td><td style="border: none; padding: 2px 4px; text-align: right;">14</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 18px;">7.2. Modelos Arquitectónicos y Estructurales UML del Sistema (Figuras 2 a 8)</td><td style="border: none; padding: 2px 4px; text-align: right;">15</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 18px;">7.3. Matriz de Validación y Ajustes Metodológicos</td><td style="border: none; padding: 2px 4px; text-align: right;">20</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; font-weight: bold;">8. Gestión Ágil (FDD) y Control de Versiones</td><td style="border: none; padding: 2px 4px; text-align: right; font-weight: bold;">20</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 18px;">8.1. Repositorio y Control de Versiones Git</td><td style="border: none; padding: 2px 4px; text-align: right;">20</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 18px;">8.2. Gestión del Proyecto con Metodología Ágil FDD</td><td style="border: none; padding: 2px 4px; text-align: right;">21</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 18px;">8.3. Tablero de Trabajo en Trello y Cierre de Iteración (Figura 9)</td><td style="border: none; padding: 2px 4px; text-align: right;">21</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; font-weight: bold;">9. Validación y Pruebas de Software</td><td style="border: none; padding: 2px 4px; text-align: right; font-weight: bold;">22</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 18px;">9.1. Reglas de Negocio Acordadas y Datos Semilla (seed.sql)</td><td style="border: none; padding: 2px 4px; text-align: right;">22</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 18px;">9.2. Matriz de Casos de Prueba Reales Ejecutados (Tabla 1)</td><td style="border: none; padding: 2px 4px; text-align: right;">22</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 18px;">9.3. Registro y Corrección de Defectos en el Código Fuente (D1 y D2)</td><td style="border: none; padding: 2px 4px; text-align: right;">25</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 18px;">9.4. Simulación de Cambio y Pruebas de Regresión (Regla R6)</td><td style="border: none; padding: 2px 4px; text-align: right;">26</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 18px;">9.5. Revisión Cruzada por Pares y Decisión de Liberación</td><td style="border: none; padding: 2px 4px; text-align: right;">26</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; padding-left: 18px;">9.6. Criterio de Verificación vs. Validación en Motrick</td><td style="border: none; padding: 2px 4px; text-align: right;">27</td></tr>
+    <tr style="background: none;"><td style="border: none; padding: 2px 4px; font-weight: bold;">10. Referencias Bibliográficas</td><td style="border: none; padding: 2px 4px; text-align: right; font-weight: bold;">28</td></tr>
   </table>
 </div>
-
-<div class="page-break"></div>
 
 <!-- ==================== CAPITULO 1 ==================== -->
 <h1>1. Propósito del Proyecto de Aula y Marco de Negocio</h1>
@@ -474,10 +549,10 @@ def build_html():
   <li><strong>Backend y Persistencia:</strong> Supabase (BaaS) sobre PostgreSQL 15, garantizando integridad referencial, restricciones de dominio CHECK y autenticación.</li>
 </ul>
 
-<h2>1.5. Modelo de Negocio y Deslinde de Responsabilidad Legal (Ley 1480 de 2011)</h2>
-<p>Motrick implementa un modelo de monetización B2B sustentado en membresías de visibilidad para talleres mecánicos y pauta publicitaria nativa, <strong>descartando expresamente el cobro de comisiones sobre reparaciones mecánicas</strong>.</p>
+<h2>1.5. Modelo de Negocio y Marco Jurídico Institucional</h2>
+<p>Motrick implementa un modelo de monetización B2B sustentado en membresías de visibilidad y verificación para talleres mecánicos, y pauta publicitaria nativa vehicular, <strong>descartando expresamente el cobro de comisiones sobre reparaciones mecánicas</strong>.</p>
 
-<h3>Prevención de Solidaridad Jurídica</h3>
+<h3>1.5.1. Prevención de Solidaridad Jurídica y Portal de Contacto (Art. 53, Ley 1480 de 2011)</h3>
 <p>De acuerdo con el <strong>Artículo 53 de la Ley 1480 de 2011 (Estatuto del Consumidor en Colombia)</strong>, la plataforma califica como <strong>portal de contacto e intermediación informativa</strong>. Si Motrick recaudara el valor del servicio de mano de obra o comisionara sobre el arreglo mecánico, la Superintendencia de Industria y Comercio (SIC) la consideraría prestador solidario, debiendo responder económicamente ante fallas mecánicas, averías colaterales o garantías no atendidas por el taller.</p>
 
 <p>Al limitar los ingresos al canon de visibilidad y verificación documental, la relación contractual por el servicio automotriz se suscribe directa y exclusivamente entre el propietario del vehículo y el taller mecánico contratado.</p>
@@ -487,11 +562,11 @@ def build_html():
   <em>"Motrick opera bajo la figura de portal de contacto (Art. 53, Ley 1480 de 2011). La plataforma no ejecuta diagnósticos mecánicos, no provee mano de obra ni actúa como garante solidario de los trabajos realizados por los talleres listados. La contratación de servicios automotrices, su calidad y cumplimiento de garantías recaen exclusivamente en el establecimiento seleccionado por el usuario."</em>
 </div>
 
-<h2>1.5.2. Publicidad Nativa Contextual y Política de Brand Safety (RNF-04)</h2>
+<h3>1.5.2. Publicidad Nativa Contextual y Política de Brand Safety (RNF-04)</h3>
 <p>Como línea secundaria de sostenimiento, se habilitan espacios pasivos en los márgenes y zonas blancas de la interfaz, alineados con los <strong>Artículos 29 y 30 de la Ley 1480 de 2011 (protección contra publicidad engañosa)</strong>:</p>
 <ul>
   <li><strong>Relevancia temático-vehicular:</strong> Solo se admiten anunciantes de servicios afines (SOAT digital, revisión técnico-mecánica en Centros CDA aliados, escáneres OBD2 Bluetooth y telepeaje).</li>
-  <li><strong>Cero intrusión (UX):</strong> Se vetan pop-ups, modales bloqueantes o banners con sonido, garantizando cero desplazamiento visual (<em>Cumulative Layout Shift = 0</em>).</li>
+  <li><strong>Cero intrusión (UX):</strong> Se vetan pop-ups, modales bloqueantes o banners con sonido, garantizando desplazamiento visual cero (<em>Cumulative Layout Shift = 0</em>).</li>
   <li><strong>Seguridad de marca (Brand Safety):</strong> Quedan prohibidos juegos móviles, apuestas deportivas, esquemas de inversión y contenido adulto (+18). Toda inserción cuenta con el distintivo gráfico visible y obligatorio <strong>"Patrocinado"</strong>.</li>
 </ul>
 
@@ -558,46 +633,46 @@ def build_html():
 <h3>3.1. Benchmarking (Análisis de Soluciones Similares)</h3>
 <p>Se analizaron aplicaciones líderes en gestión y servicios automotrices (Drivvo, Autolab y MercadoLibre Repuestos). Conclusión: las aplicaciones existentes resuelven problemas de forma fragmentada. La ventaja competitiva de Motrick radica en <strong>centralizar en una sola plataforma</strong> el directorio confiable, el catálogo compatible y la bitácora técnica.</p>
 
-<h3>3.2. Encuesta a Usuarios Finales (Propietarios de Vehículos)</h3>
-<p>Se diseñó e implementó un formulario estructurado aplicado a <strong>49 propietarios de vehículos</strong> en Colombia para cuantificar las dificultades cotidianas en el mantenimiento automotriz.</p>
+<h3>3.2. Encuesta a Usuarios Potenciales (49 Conductores)</h3>
+<p>Se diseñó y aplicó un cuestionario digital a 49 conductores activos en Bogotá y Cartagena, indagando sobre hábitos de compra de repuestos, selección de talleres y control del historial de reparaciones.</p>
 
-<h3>3.3. Revisión Documental (Informes de la Industria y Gremios)</h3>
-<p>Se analizaron reportes de la <em>American Automobile Association</em> (AAA, 2016), estudios de <em>McKinsey & Company</em> (2018) sobre el mercado de postventa automotriz, e informes gremiales de <em>ASOPARTES</em> y <em>FENALCO</em> (2023) sobre informalidad y compra desinformada de autopartes en Colombia.</p>
+<h3>3.3. Revisión Documental y Normativa del Sector Automotor</h3>
+<p>Se articularon estudios gremiales de ASOPARTES, informes internacionales de la American Automobile Association (AAA, 2016) sobre la desconfianza del consumidor en la reparación vehicular, y el marco legal del Estatuto del Consumidor (Ley 1480 de 2011).</p>
 
 <div class="page-break"></div>
 
 <!-- ==================== CAPITULO 4 ==================== -->
 <h1>4. Muestras de las Herramientas Utilizadas y Evidencias del Sector</h1>
 
-<h2>4.1. Matriz de Análisis Comparativo (Benchmarking)</h2>
+<h2>4.1. Cuadro Comparativo de Benchmarking</h2>
 
 <table>
   <thead>
     <tr>
-      <th>Aplicación</th>
-      <th>Funcionalidades Destacadas</th>
-      <th>Funcionalidades Faltantes</th>
-      <th>Hallazgo / Oportunidad para Motrick</th>
+      <th style="width: 20%;">Plataforma</th>
+      <th style="width: 25%;">Puntos Fuertes</th>
+      <th style="width: 25%;">Limitaciones Detectadas</th>
+      <th style="width: 30%;">Diferencial Estratégico de Motrick</th>
     </tr>
   </thead>
   <tbody>
     <tr>
       <td><strong>Drivvo</strong></td>
-      <td>Excelente control de combustible, gastos y recordatorios.</td>
-      <td>Carece de directorio de talleres y no permite cotizar repuestos.</td>
-      <td>El usuario lleva control pero debe salir de la app para buscar taller. Motrick unifica ambos mundos.</td>
+      <td>Excelente registro de kilometraje y consumo de combustible.</td>
+      <td>No cuenta con directorio de talleres ni catálogo de piezas.</td>
+      <td>Motrick unifica bitácora con directorio especializado y catálogo.</td>
     </tr>
     <tr>
       <td><strong>Autolab</strong></td>
-      <td>Red de talleres aliados, precios estandarizados y agendamiento.</td>
-      <td>No ofrece bitácora personalizada ni catálogo para compra independiente.</td>
-      <td>Falta libertad de elección técnica. El directorio filtrable con reseñas de Motrick otorga autonomía.</td>
+      <td>Red propia de talleres y estandarización de servicios mecánicos.</td>
+      <td>Modelo cerrado limitado a su propia franquicia de talleres.</td>
+      <td>Motrick es un ecosistema abierto con validación y reseñas auditadas.</td>
     </tr>
     <tr>
       <td><strong>MercadoLibre</strong></td>
-      <td>Catálogo masivo de autopartes y pasarela de pago robusta.</td>
-      <td>No se conecta con el historial del auto ni sugiere talleres para instalación.</td>
-      <td>Información desarticulada. Motrick conecta el catálogo directamente con el modelo y la bitácora.</td>
+      <td>Catálogo masivo de autopartes y despacho a domicilio.</td>
+      <td>Alta tasa de error en compatibilidad y nula gestión de bitácora.</td>
+      <td>Motrick categoriza repuestos según modelo vehicular y bitácora.</td>
     </tr>
   </tbody>
 </table>
@@ -628,93 +703,131 @@ def build_html():
 
 <h2>5.1. Requerimientos Funcionales (RF)</h2>
 
-<table class="req-table">
-  <tr><th>Identificador</th><td><strong>RF-01</strong></td></tr>
-  <tr><th>Nombre</th><td>Registrar y gestionar mantenimiento en bitácora vehicular</td></tr>
-  <tr><th>Descripción</th><td>El sistema debe permitir al usuario propietario registrar mantenimientos especificando vehículo, fecha, odómetro, título del servicio, notas, taller y repuesto opcional.</td></tr>
-  <tr><th>Fuente</th><td>Encuesta a Usuarios (Pregunta 4: 75.5% sin registro organizado) y Revisión Documental.</td></tr>
-  <tr><th>Prioridad</th><td>Alta</td></tr>
-  <tr><th>Criterio de Aceptación</th><td>El registro se almacena en la tabla <code>registros_bitacora</code> de Supabase. Si el odómetro ingresado es menor al actual, la interfaz bloquea el registro (Defecto D1 corregido).</td></tr>
-</table>
+<div class="req-box">
+  <div class="req-box-header">Ficha Técnica: RF-01 — Registro y Control de Mantenimiento en Bitácora</div>
+  <table class="req-table">
+    <colgroup><col style="width: 25%;"><col style="width: 75%;"></colgroup>
+    <tr><th>Identificador</th><td><strong>RF-01</strong></td></tr>
+    <tr><th>Nombre</th><td>Registrar y gestionar mantenimiento en bitácora vehicular</td></tr>
+    <tr><th>Descripción</th><td>El sistema debe permitir al usuario propietario registrar mantenimientos especificando vehículo, fecha, odómetro, título del servicio, notas, taller ejecutor y repuesto opcional.</td></tr>
+    <tr><th>Fuente</th><td>Encuesta a Usuarios (Pregunta 4: 75.5% sin registro organizado) y Revisión Documental.</td></tr>
+    <tr><th>Prioridad</th><td>Alta</td></tr>
+    <tr><th>Criterio de Aceptación</th><td>El registro se almacena en la tabla <code>registros_bitacora</code> de Supabase. Si el odómetro ingresado es menor al actual, la interfaz bloquea el registro (Defecto D1 corregido).</td></tr>
+  </table>
+</div>
 
-<table class="req-table">
-  <tr><th>Identificador</th><td><strong>RF-02</strong></td></tr>
-  <tr><th>Nombre</th><td>Filtrar directorio de talleres por especialidad técnica</td></tr>
-  <tr><th>Descripción</th><td>El sistema debe listar mecánicos y talleres permitiendo aplicar filtros por especialidad (Frenos, Motor, Suspensión, Transmisión, Eléctrico) y zona geográfica en Bogotá.</td></tr>
-  <tr><th>Fuente</th><td>Encuesta a Usuarios (Pregunta 2: 98% de interés) y Benchmarking.</td></tr>
-  <tr><th>Prioridad</th><td>Alta</td></tr>
-  <tr><th>Criterio de Aceptación</th><td>La consulta a <code>mecanicos</code> filtra dinámicamente mediante <code>ILIKE</code> sobre la especialidad y actualiza la cuadrícula de talleres en tiempo real.</td></tr>
-</table>
+<div class="req-box">
+  <div class="req-box-header">Ficha Técnica: RF-02 — Directorio de Talleres con Filtros de Especialidad</div>
+  <table class="req-table">
+    <colgroup><col style="width: 25%;"><col style="width: 75%;"></colgroup>
+    <tr><th>Identificador</th><td><strong>RF-02</strong></td></tr>
+    <tr><th>Nombre</th><td>Filtrar directorio de talleres por especialidad técnica</td></tr>
+    <tr><th>Descripción</th><td>El sistema debe listar mecánicos y talleres permitiendo aplicar filtros por especialidad (Frenos, Motor, Suspensión, Transmisión, Eléctrico) y zona geográfica en Bogotá.</td></tr>
+    <tr><th>Fuente</th><td>Encuesta a Usuarios (Pregunta 2: 98% de interés) y Benchmarking.</td></tr>
+    <tr><th>Prioridad</th><td>Alta</td></tr>
+    <tr><th>Criterio de Aceptación</th><td>La consulta a <code>mecanicos</code> filtra dinámicamente mediante <code>ILIKE</code> sobre la especialidad y actualiza la cuadrícula de talleres en tiempo real.</td></tr>
+  </table>
+</div>
 
-<table class="req-table">
-  <tr><th>Identificador</th><td><strong>RF-03</strong></td></tr>
-  <tr><th>Nombre</th><td>Consultar valoraciones y reseñas de mecánicos</td></tr>
-  <tr><th>Descripción</th><td>El perfil de cada taller debe desplegar una calificación promedio (1.0 a 5.0 estrellas) calculada a partir de las reseñas emitidas por clientes verificados.</td></tr>
-  <tr><th>Fuente</th><td>Revisión Documental (Mitigación de desconfianza según estudio AAA).</td></tr>
-  <tr><th>Prioridad</th><td>Media / Alta</td></tr>
-  <tr><th>Criterio de Aceptación</th><td>El sistema renderiza el promedio de estrellas y lista las reseñas. La tabla <code>valoraciones</code> en PostgreSQL protege el rango estricto mediante restricción CHECK.</td></tr>
-</table>
-
-<table class="req-table">
-  <tr><th>Identificador</th><td><strong>RF-04</strong></td></tr>
-  <tr><th>Nombre</th><td>Buscar repuestos compatibles según el modelo vehicular</td></tr>
-  <tr><th>Descripción</th><td>El sistema debe consultar un catálogo de piezas automotrices categorizadas, indicando mediante un badge gráfico si el repuesto es compatible con el vehículo activo del usuario.</td></tr>
-  <tr><th>Fuente</th><td>Encuesta a Usuarios (Pregunta 3: 53.1% teme incompatibilidad) e informes de ASOPARTES.</td></tr>
-  <tr><th>Prioridad</th><td>Alta</td></tr>
-  <tr><th>Criterio de Aceptación</th><td>El catálogo consulta la tabla <code>repuestos</code> en Supabase y compara la columna <code>compatibilidad</code> con la marca y modelo del automóvil activo.</td></tr>
-</table>
-
-<table class="req-table">
-  <tr><th>Identificador</th><td><strong>RF-05</strong></td></tr>
-  <tr><th>Nombre</th><td>Verificación y validación de talleres mecánicos</td></tr>
-  <tr><th>Descripción</th><td>El sistema debe disponer de un canal para que los talleres soliciten una insignia de acreditación suministrando NIT/RUT, razón social, dirección física y teléfono de contacto. El Administrador valida la autenticidad de los datos para otorgar la insignia de taller verificado, y el directorio permite filtrar según este criterio.</td></tr>
-  <tr><th>Fuente</th><td>Elicitación: Mitigación de desconfianza del usuario (Estudio AAA) y modelo de membresías B2B.</td></tr>
-  <tr><th>Prioridad</th><td>Media</td></tr>
-  <tr><th>Criterio de Aceptación</th><td>El perfil del taller en <code>/directorio</code> muestra la insignia gráfica tras su confirmación en base de datos, y el filtro "Solo verificados" actualiza el listado en tiempo real.</td></tr>
-</table>
+<div class="req-box">
+  <div class="req-box-header">Ficha Técnica: RF-03 — Consulta de Valoraciones y Reseñas de Mecánicos</div>
+  <table class="req-table">
+    <colgroup><col style="width: 25%;"><col style="width: 75%;"></colgroup>
+    <tr><th>Identificador</th><td><strong>RF-03</strong></td></tr>
+    <tr><th>Nombre</th><td>Consultar valoraciones y reseñas de mecánicos</td></tr>
+    <tr><th>Descripción</th><td>El perfil de cada taller debe desplegar una calificación promedio (1.0 a 5.0 estrellas) calculada a partir de las reseñas emitidas por clientes verificados.</td></tr>
+    <tr><th>Fuente</th><td>Revisión Documental (Mitigación de desconfianza según estudio AAA).</td></tr>
+    <tr><th>Prioridad</th><td>Media / Alta</td></tr>
+    <tr><th>Criterio de Aceptación</th><td>El sistema renderiza el promedio de estrellas y lista las reseñas. La tabla <code>valoraciones</code> en PostgreSQL protege el rango estricto mediante restricción CHECK.</td></tr>
+  </table>
+</div>
 
 <div class="page-break"></div>
 
+<div class="req-box">
+  <div class="req-box-header">Ficha Técnica: RF-04 — Catálogo de Repuestos con Compatibilidad Vehicular</div>
+  <table class="req-table">
+    <colgroup><col style="width: 25%;"><col style="width: 75%;"></colgroup>
+    <tr><th>Identificador</th><td><strong>RF-04</strong></td></tr>
+    <tr><th>Nombre</th><td>Buscar repuestos compatibles según el modelo vehicular</td></tr>
+    <tr><th>Descripción</th><td>El sistema debe consultar un catálogo de piezas automotrices categorizadas, indicando mediante un badge gráfico si el repuesto es compatible con el vehículo activo del usuario.</td></tr>
+    <tr><th>Fuente</th><td>Encuesta a Usuarios (Pregunta 3: 53.1% teme incompatibilidad) e informes de ASOPARTES.</td></tr>
+    <tr><th>Prioridad</th><td>Alta</td></tr>
+    <tr><th>Criterio de Aceptación</th><td>El catálogo consulta la tabla <code>repuestos</code> en Supabase y compara la columna <code>compatibilidad</code> con la marca y modelo del automóvil activo.</td></tr>
+  </table>
+</div>
+
+<div class="req-box">
+  <div class="req-box-header">Ficha Técnica: RF-05 — Verificación y Validación Documental de Talleres</div>
+  <table class="req-table">
+    <colgroup><col style="width: 25%;"><col style="width: 75%;"></colgroup>
+    <tr><th>Identificador</th><td><strong>RF-05</strong></td></tr>
+    <tr><th>Nombre</th><td>Verificación y validación de talleres mecánicos</td></tr>
+    <tr><th>Descripción</th><td>El sistema debe disponer de un canal para que los talleres soliciten una insignia de acreditación suministrando NIT/RUT, razón social, dirección física y teléfono de contacto. El Administrador valida la autenticidad de los datos para otorgar la insignia de taller verificado, y el directorio permite filtrar según este criterio.</td></tr>
+    <tr><th>Fuente</th><td>Elicitación: Mitigación de desconfianza del usuario (Estudio AAA) y modelo de membresías B2B.</td></tr>
+    <tr><th>Prioridad</th><td>Media</td></tr>
+    <tr><th>Criterio de Aceptación</th><td>El perfil del taller en <code>/directorio</code> muestra la insignia gráfica tras su confirmación en base de datos, y el filtro "Solo verificados" actualiza el listado en tiempo real.</td></tr>
+  </table>
+</div>
+
 <h2>5.2. Requerimientos No Funcionales (RNF)</h2>
 
-<table class="req-table">
-  <tr><th>Identificador</th><td><strong>RNF-01</strong></td></tr>
-  <tr><th>Nombre</th><td>Arquitectura Full-Stack en Next.js y Modern UX</td></tr>
-  <tr><th>Descripción</th><td>La plataforma debe construirse sobre Next.js 14 con App Router, React 18, TypeScript estricto y Tailwind CSS, soportando tema claro/oscuro y componentes accesibles Radix UI.</td></tr>
-  <tr><th>Fuente</th><td>Estándar arquitectónico de Motrick.</td></tr>
-  <tr><th>Prioridad</th><td>Alta</td></tr>
-  <tr><th>Criterio de Aceptación</th><td>Compilación de producción (<code>npm run build</code>) exitosa con 0 errores de TypeScript y pre-renderizado estático de rutas.</td></tr>
-</table>
+<div class="req-box">
+  <div class="req-box-header">Ficha Técnica: RNF-01 — Arquitectura Full-Stack en Next.js y Modern UX</div>
+  <table class="req-table">
+    <colgroup><col style="width: 25%;"><col style="width: 75%;"></colgroup>
+    <tr><th>Identificador</th><td><strong>RNF-01</strong></td></tr>
+    <tr><th>Nombre</th><td>Arquitectura Full-Stack en Next.js y Modern UX</td></tr>
+    <tr><th>Descripción</th><td>La plataforma debe construirse sobre Next.js 14 con App Router, React 18, TypeScript estricto y Tailwind CSS, soportando tema claro/oscuro y componentes accesibles Radix UI.</td></tr>
+    <tr><th>Fuente</th><td>Estándar arquitectónico de Motrick.</td></tr>
+    <tr><th>Prioridad</th><td>Alta</td></tr>
+    <tr><th>Criterio de Aceptación</th><td>Compilación de producción (<code>npm run build</code>) exitosa con 0 errores de TypeScript y pre-renderizado estático de rutas.</td></tr>
+  </table>
+</div>
 
-<table class="req-table">
-  <tr><th>Identificador</th><td><strong>RNF-02</strong></td></tr>
-  <tr><th>Nombre</th><td>Persistencia y Base de Datos en Supabase (PostgreSQL) con RLS</td></tr>
-  <tr><th>Descripción</th><td>El sistema debe persistir datos relacionales en PostgreSQL alojado en Supabase, implementando políticas Row-Level Security (RLS) para proteger datos de bitácora y vehículos.</td></tr>
-  <tr><th>Fuente</th><td>Requerimientos de seguridad y persistencia cloud.</td></tr>
-  <tr><th>Prioridad</th><td>Alta</td></tr>
-  <tr><th>Criterio de Aceptación</th><td>Tablas relacionales protegidas con RLS; consultas anónimas limitadas a lectura de catálogo público y directorios autorizados.</td></tr>
-</table>
+<div class="req-box">
+  <div class="req-box-header">Ficha Técnica: RNF-02 — Persistencia en Supabase (PostgreSQL) con RLS</div>
+  <table class="req-table">
+    <colgroup><col style="width: 25%;"><col style="width: 75%;"></colgroup>
+    <tr><th>Identificador</th><td><strong>RNF-02</strong></td></tr>
+    <tr><th>Nombre</th><td>Persistencia y Base de Datos en Supabase (PostgreSQL) con RLS</td></tr>
+    <tr><th>Descripción</th><td>El sistema debe persistir datos relacionales en PostgreSQL alojado en Supabase, implementando políticas Row-Level Security (RLS) para proteger datos de bitácora y vehículos.</td></tr>
+    <tr><th>Fuente</th><td>Requerimientos de seguridad y persistencia cloud.</td></tr>
+    <tr><th>Prioridad</th><td>Alta</td></tr>
+    <tr><th>Criterio de Aceptación</th><td>Tablas relacionales protegidas con RLS; consultas anónimas limitadas a lectura de catálogo público y directorios autorizados.</td></tr>
+  </table>
+</div>
 
-<table class="req-table">
-  <tr><th>Identificador</th><td><strong>RNF-03</strong></td></tr>
-  <tr><th>Nombre</th><td>Simulación de Transacciones y Checkout Interactivo (Mockups)</td></tr>
-  <tr><th>Descripción</th><td>La pasarela de compra debe implementar un flujo simulado en 4 pasos (Resumen, Tarjeta con animación 3D, Procesamiento y Comprobante) sin realizar cobros bancarios reales.</td></tr>
-  <tr><th>Fuente</th><td>Restricciones del MVP del Proyecto de Aula.</td></tr>
-  <tr><th>Prioridad</th><td>Media</td></tr>
-  <tr><th>Criterio de Aceptación</th><td>El formulario exige 16 dígitos de tarjeta y 3 de CVV antes de permitir el avance (Defecto D2 corregido) y genera un comprobante con orden MT-XXXXXX.</td></tr>
-</table>
+<div class="page-break"></div>
 
-<table class="req-table">
-  <tr><th>Identificador</th><td><strong>RNF-04</strong></td></tr>
-  <tr><th>Nombre</th><td>Visualización de publicidad nativa y contextual no invasiva</td></tr>
-  <tr><th>Descripción</th><td>La interfaz debe desplegar inserciones publicitarias pasivas integradas orgánicamente en el diseño (componente <code>SponsoredCard</code>) para servicios vehiculares aliados, con la etiqueta "Patrocinado" y sin recurrir a ventanas emergentes.</td></tr>
-  <tr><th>Fuente</th><td>Modelo de negocio de la plataforma y atributos de usabilidad (UX).</td></tr>
-  <tr><th>Prioridad</th><td>Baja / Media</td></tr>
-  <tr><th>Criterio de Aceptación</th><td>Las tarjetas respetan los tokens cromáticos de Tailwind CSS en temas claro y oscuro, sin interferir en los formularios ni generar redirecciones automáticas.</td></tr>
-</table>
+<div class="req-box">
+  <div class="req-box-header">Ficha Técnica: RNF-03 — Simulación de Transacciones y Checkout Interactivo</div>
+  <table class="req-table">
+    <colgroup><col style="width: 25%;"><col style="width: 75%;"></colgroup>
+    <tr><th>Identificador</th><td><strong>RNF-03</strong></td></tr>
+    <tr><th>Nombre</th><td>Simulación de Transacciones y Checkout Interactivo (Mockups)</td></tr>
+    <tr><th>Descripción</th><td>La pasarela de compra debe implementar un flujo simulado en 4 pasos (Resumen, Tarjeta con animación 3D, Procesamiento y Comprobante) sin realizar cobros bancarios reales.</td></tr>
+    <tr><th>Fuente</th><td>Restricciones del MVP del Proyecto de Aula.</td></tr>
+    <tr><th>Prioridad</th><td>Media</td></tr>
+    <tr><th>Criterio de Aceptación</th><td>El formulario exige exactamente 16 dígitos de tarjeta y 3 de CVV antes de permitir el avance (Defecto D2 corregido) y genera un comprobante con orden ficticia MT-XXXXXX.</td></tr>
+  </table>
+</div>
+
+<div class="req-box" style="margin-top: 18px;">
+  <div class="req-box-header">Ficha Técnica: RNF-04 — Visualización de Publicidad Nativa Contextual y Brand Safety</div>
+  <table class="req-table">
+    <colgroup><col style="width: 25%;"><col style="width: 75%;"></colgroup>
+    <tr><th>Identificador</th><td><strong>RNF-04</strong></td></tr>
+    <tr><th>Nombre</th><td>Visualización de publicidad nativa contextual no invasiva</td></tr>
+    <tr><th>Descripción</th><td>La interfaz debe desplegar inserciones publicitarias pasivas integradas orgánicamente en el diseño (componente <code>SponsoredCard</code>) para servicios vehiculares aliados, con la etiqueta visible "Patrocinado", política de Brand Safety y sin ventanas emergentes.</td></tr>
+    <tr><th>Fuente</th><td>Modelo de negocio de la plataforma, Art. 29 y 30 de la Ley 1480 de 2011, y atributos de usabilidad (UX).</td></tr>
+    <tr><th>Prioridad</th><td>Baja / Media</td></tr>
+    <tr><th>Criterio de Aceptación</th><td>Las tarjetas respetan los tokens cromáticos de Tailwind CSS en temas claro y oscuro, garantizan desplazamiento visual cero (<em>CLS = 0</em>) y no interfieren en los formularios ni generan redirecciones automáticas.</td></tr>
+  </table>
+</div>
 
 <!-- ==================== CAPITULO 6 ==================== -->
-<h1>6. Priorización de Requerimientos y Alcance Funcional</h1>
+<h1>6. Priorización de Requerimientos y Alcance Funcional (FDD)</h1>
 
 <p>Aplicando los principios de la metodología <strong>Feature-Driven Development (FDD)</strong>, los requerimientos se clasificaron en tres niveles de entrega:</p>
 <ul>
@@ -738,11 +851,10 @@ def build_html():
 <div class="figure-container">
   <!-- Diagrama Vectorial SVG de Casos de Uso -->
   <svg class="svg-diagram" viewBox="0 0 740 420" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
-    <!-- Background Frame -->
+    <!-- Marco del Sistema -->
     <rect x="180" y="20" width="380" height="380" rx="12" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 2"/>
     <text x="370" y="42" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="bold" fill="#0f172a" text-anchor="middle">Plataforma Motrick (MVP)</text>
 
-    <!-- Actores -->
     <!-- Usuario Propietario -->
     <g transform="translate(45, 120)">
       <circle cx="20" cy="15" r="10" fill="#ffffff" stroke="#0f172a" stroke-width="1.8"/>
@@ -832,40 +944,87 @@ def build_html():
   </div>
 </div>
 
-<h3>Especificación PlantUML del Modelo Actualizado</h3>
-<pre><code>@startuml Motrick_Casos_Uso_Actualizado
-left to right direction
-skinparam packageStyle rectangle
+<div class="page-break"></div>
 
-actor "Usuario\n(Propietario)" as User
-actor "Mecánico / Taller" as Mech
-actor "Administrador\n(Equipo Motrick)" as Admin
-actor "Sistema Motrick\n(Gestión DB)" as Sys
+<h2>7.2. Modelos Arquitectónicos y Estructurales UML del Sistema (Figuras 2 a 8)</h2>
+<p>Para garantizar el rigor del <strong>Pilar 3 (Modelado UML y Diseño Arquitectónico)</strong> exigido en la evaluación del proyecto de aula, se integran a continuación los modelos estructurales, dinámicos y físicos que sustentan la plataforma Motrick:</p>
 
-rectangle "Plataforma Motrick (MVP)" {{
-  usecase "Buscar repuestos por vehículo" as UC_Repuestos
-  usecase "Simular compra de repuestos" as UC_Checkout
-  usecase "Filtrar mecánicos y talleres" as UC_Directorio
-  usecase "Consultar valoraciones y reseñas" as UC_Valoraciones
-  usecase "Solicitar verificación de taller" as UC_SolicitarVerif
-  usecase "Registrar mantenimiento en bitácora" as UC_RegistrarBitacora
-  usecase "Vincular repuesto del catálogo" as UC_VincularPieza
-  usecase "Gestionar Catálogo y Directorio" as UC_GestionCatalogo
-  usecase "Verificar y aprobar talleres" as UC_AprobarTaller
-}}
+<h3>7.2.1. Diagrama de Clases del Sistema (Figura 2)</h3>
+<p>Modela las entidades del dominio, su visibilidad (privada/pública), atributos tipados y operaciones de negocio. Destaca la generalización/herencia de la clase abstracta <code>Usuario</code> hacia <code>Cliente</code> y <code>Mecánico</code>, junto a las relaciones con <code>Vehículo</code>, <code>RegistroBitacora</code>, <code>Repuesto</code> y <code>Valoracion</code>.</p>
 
-User --> UC_Repuestos
-User --> UC_Directorio
-User --> UC_Valoraciones
-User --> UC_RegistrarBitacora
+<div class="figure-container">
+  {"<img src='" + clases_b64 + "' alt='Diagrama de Clases del Sistema Motrick' style='max-height: 480px; width: auto;' />" if clases_b64 else ""}
+  <div class="figure-caption">
+    <span class="figure-title">Figura 2.</span> <em>Diagrama de Clases del Sistema Motrick.</em><br>
+    <em>Nota.</em> Representamos los elementos del sistema a través de clases que contienen atributos y métodos, conocidos como operaciones. La visibilidad define la accesibilidad indicando si son privados (-) o públicos (+). Elaboración propia.
+  </div>
+</div>
 
-UC_Checkout .> UC_Repuestos : &lt;&lt;extend&gt;&gt;
-UC_VincularPieza .> UC_RegistrarBitacora : &lt;&lt;extend&gt;&gt;
+<div class="page-break"></div>
 
-Mech --> UC_SolicitarVerif
-Admin --> UC_GestionCatalogo
-Admin --> UC_AprobarTaller
-@enduml</code></pre>
+<h3>7.2.2. Diagramas de Secuencia del Sistema (Figuras 3, 4 y 5)</h3>
+<p>Describen la interacción temporal y el intercambio de mensajes entre los componentes de la interfaz (Next.js/React), los endpoints de servidor y la base de datos Supabase en los tres flujos críticos del MVP:</p>
+
+<div class="figure-container">
+  {"<img src='" + sec1_b64 + "' alt='Diagrama de Secuencia - Búsqueda de Repuestos' style='max-height: 330px; width: auto;' />" if sec1_b64 else ""}
+  <div class="figure-caption">
+    <span class="figure-title">Figura 3.</span> <em>Diagrama de Secuencia — Búsqueda de un Repuesto por Vehículo (RF-04).</em><br>
+    <em>Nota.</em> El diagrama detalla el proceso mostrando las interacciones en el orden en que ocurren, avanzando hacia abajo en la línea de vida con cada mensaje entre Usuario, Frontend, Backend y BD Supabase. Elaboración propia.
+  </div>
+</div>
+
+<div class="figure-container" style="margin-top: 14px;">
+  {"<img src='" + sec2_b64 + "' alt='Diagrama de Secuencia - Registro en Bitácora' style='max-height: 330px; width: auto;' />" if sec2_b64 else ""}
+  <div class="figure-caption">
+    <span class="figure-title">Figura 4.</span> <em>Diagrama de Secuencia — Registro en la Bitácora de Mantenimiento (RF-01).</em><br>
+    <em>Nota.</em> Muestra la secuencia de eventos para la validación de sesión y el registro persistente en la base de datos Supabase mediante cajas de activación temporal. Elaboración propia.
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<div class="figure-container">
+  {"<img src='" + sec3_b64 + "' alt='Diagrama de Secuencia - Simulación de Compra' style='max-height: 330px; width: auto;' />" if sec3_b64 else ""}
+  <div class="figure-caption">
+    <span class="figure-title">Figura 5.</span> <em>Diagrama de Secuencia — Simulación de Compra de Repuestos (RNF-03).</em><br>
+    <em>Nota.</em> Representación temporal de la maqueta de pago. Al tratarse de un entorno simulado, las respuestas del sistema hacia el usuario se ilustran como mensajes de retorno con línea discontinua sin consumir pasarelas bancarias externas. Elaboración propia.
+  </div>
+</div>
+
+<h3>7.2.3. Diagrama de Actividades (Figura 6)</h3>
+<p>Modela el flujo procedural de registro en la bitácora vehicular, ilustrando los puntos de bifurcación mediante un nodo de decisión (rombo) para evaluar si el mantenimiento incluye la vinculación opcional de una pieza del catálogo técnico.</p>
+
+<div class="figure-container">
+  {"<img src='" + act_b64 + "' alt='Diagrama de Actividades - Registrar Mantenimiento' style='max-height: 320px; width: auto;' />" if act_b64 else ""}
+  <div class="figure-caption">
+    <span class="figure-title">Figura 6.</span> <em>Diagrama de Actividades — Registrar Mantenimiento y Personalización Vehicular.</em><br>
+    <em>Nota.</em> El diagrama muestra lo que sucede durante la actividad y los pasos secuenciales a seguir, incorporando un nodo de decisión para evaluar la vinculación de repuestos antes de actualizar el historial. Elaboración propia.
+  </div>
+</div>
+
+<div class="page-break"></div>
+
+<h3>7.2.4. Diagrama de Componentes (Figura 7)</h3>
+<p>Presenta una vista física del sistema organizada en subsistemas modulares. El componente de la interfaz de usuario opera bajo enfoque de caja blanca (White Box), mientras que los servicios Backend y Supabase operan como caja negra (Black Box) interconectadas mediante contratos HTTP/REST y el SDK nativo.</p>
+
+<div class="figure-container">
+  {"<img src='" + comp_b64 + "' alt='Diagrama de Componentes del Sistema Motrick' style='width: 95%; height: auto;' />" if comp_b64 else ""}
+  <div class="figure-caption">
+    <span class="figure-title">Figura 7.</span> <em>Diagrama de Componentes — Arquitectura Modular del Sistema Motrick.</em><br>
+    <em>Nota.</em> Presenta una vista física del sistema dividida en partes modulares. El componente de la interfaz opera bajo un enfoque de caja blanca donde vemos los submódulos internos, mientras los servicios de servidor y base de datos operan bajo enfoque de caja negra. Elaboración propia.
+  </div>
+</div>
+
+<h3>7.2.5. Diagrama de Despliegue (Figura 8)</h3>
+<p>Ilustra la asignación física de artefactos de software sobre nodos de cómputo y entornos de ejecución cloud: Dispositivo Cliente (Navegador/App), Servidor de Aplicaciones (Vercel con Node.js y React) e Infraestructura BaaS (Supabase Cloud con PostgreSQL y Auth) comunicados a través de protocolos seguros HTTPS y TCP/IP.</p>
+
+<div class="figure-container">
+  {"<img src='" + desp_b64 + "' alt='Diagrama de Despliegue del Sistema Motrick' style='width: 95%; height: auto;' />" if desp_b64 else ""}
+  <div class="figure-caption">
+    <span class="figure-title">Figura 8.</span> <em>Diagrama de Despliegue — Topología Física y Nodos de Infraestructura Cloud.</em><br>
+    <em>Nota.</em> Nos brinda una vista física del sistema ilustrando qué software se ejecuta en qué hardware en particular, dividiendo la topología en nodos físicos y lógicos que ejecutan los artefactos en su interior. Elaboración propia.
+  </div>
+</div>
 
 <div class="page-break"></div>
 
@@ -937,13 +1096,13 @@ Admin --> UC_AprobarTaller
 <p>Se adoptó <strong>Feature-Driven Development (FDD)</strong> por su perfecta sincronía con la arquitectura basada en componentes modulares de Next.js. El equipo diseñó, codificó y probó características concretas orientadas al cliente (<em>"Filtrar mecánicos por frenos"</em>, <em>"Comprobar compatibilidad Mazda 3"</em>, <em>"Registrar cambio de pastillas"</em>).</p>
 
 <h2>8.3. Tablero de Trabajo y Cierre de Iteración del MVP</h2>
-<p>El seguimiento se ejecutó en Trello mediante un tablero Kanban con columnas de estado: <em>Backlog</em>, <em>Por Hacer (To Do)</em>, <em>En Progreso</em>, <em>Revisión/Pruebas</em> y <em>Completado</em>.</p>
+<p>El seguimiento se ejecutó en Trello mediante un tablero Kanban (Figura 9) con columnas de estado: <em>Backlog</em>, <em>Por Hacer (To Do)</em>, <em>En Progreso</em>, <em>Revisión/Pruebas</em> y <em>Completado</em>.</p>
 
 <div class="figure-container">
-  {"<img src='" + trello_b64 + "' alt='Tablero de Gestión Ágil en Trello' />" if trello_b64 else ""}
+  {"<img src='" + trello_b64 + "' alt='Tablero de Gestión Ágil en Trello' style='width: 100%; height: auto;' />" if trello_b64 else ""}
   <div class="figure-caption">
-    <span class="figure-title">Figura 2.</span> <em>Tablero de Gestión Ágil (FDD) en Estado de Cierre de Iteración del MVP de Motrick.</em><br>
-    <em>Nota.</em> Elaboración propia en Trello (2026). Refleja el 100% de los requerimientos completados para el corte evaluativo, distribuidos equitativamente entre Alejandro Paternina (AP) y Johan Brieva (JF): Setup de Arquitectura (AP), RF-01 (JF), RF-02 (JF), RF-04 (AP), RNF-01 (AP), RNF-02 (JF), RF-03 (AP), RNF-03 (AP) y RF-05 (AP/JF).
+    <span class="figure-title">Figura 9.</span> <em>Tablero de Gestión Ágil (FDD) en Estado de Cierre de Iteración del MVP de Motrick.</em><br>
+    <em>Nota.</em> Elaboración propia en Trello (2026). Refleja el 100% de los requerimientos completados para el corte evaluativo, distribuidos equitativamente entre Alejandro Paternina (AP) y Johan Brieva (JF): Setup de Arquitectura (AP), RF-01: Registrar mantenimiento en bitácora (JF), RF-02: Filtrar directorio de talleres (JF), RF-03: Consultar valoraciones de mecánicos (AP), RF-04: Buscar repuestos por categoría y compatibilidad (AP), RF-05: Verificación y validación de talleres mecánicos (AP / JF), RNF-01: Arquitectura Full-Stack Next.js (AP), RNF-02: Persistencia en Supabase con RLS (JF), RNF-03: Mockups de Transacciones y Checkout (AP), y RNF-04: Visualización de publicidad nativa contextual y Brand Safety (AP).
   </div>
 </div>
 
@@ -954,17 +1113,17 @@ Admin --> UC_AprobarTaller
 
 <p>Para garantizar el rigor de la ingeniería de software y evitar simulaciones artificiales, las pruebas del sistema se ejecutaron directamente contra la base de datos PostgreSQL en Supabase Cloud (<code>https://vdtmnkgherljtjsdhdzw.supabase.co</code>) y contra la interfaz en Next.js.</p>
 
-<h2>9.1. Reglas de Negocio Acordadas y Datos Semilla</h2>
+<h2>9.1. Reglas de Negocio Acordadas y Datos Semilla (seed.sql)</h2>
 <p>Se sembraron datos base controlados mediante el script <code>supabase/seed.sql</code>:</p>
 <ul>
   <li><strong>Usuario Base:</strong> UUID <code>a0000000-0000-0000-0000-000000000001</code> (Alejandro Paternina).</li>
   <li><strong>Vehículos Registrados:</strong> Mazda 3 Grand Touring 2021 (Placa KDM-482, Odómetro 48.230 km) y Toyota Hilux 2019 (Placa THX-901, Odómetro 72.400 km).</li>
   <li><strong>Catálogo y Directorio:</strong> 6 repuestos de alta rotación y 3 talleres mecánicos vinculados en Bogotá.</li>
-  <li><strong>Regla R1 (Consistencia de Odómetro):</strong> El registro de bitácora exige fecha válida y kilometraje mayor o igual al actual del vehículo.</li>
-  <li><strong>Regla R2 (Vinculación Opcional de Pieza):</strong> Permite asociar un repuesto del catálogo sin bloquear si se omite.</li>
-  <li><strong>Regla R3 (Integridad de Puntuación):</strong> El directorio calcula promedios dentro del rango estricto de 1.0 a 5.0 estrellas.</li>
-  <li><strong>Regla R4 (Compatibilidad Técnica):</strong> Filtra piezas coincidentes por modelo o repuestos de aplicación "Universal".</li>
-  <li><strong>Regla R5 (Validación de Maqueta y RLS):</strong> Exige 16 dígitos de tarjeta y 3 de CVV; la base de datos restringe mutaciones no autorizadas por RLS.</li>
+  <li><strong>Regla R1 (Consistencia de Odómetro - RF-01):</strong> El registro de bitácora exige fecha válida y kilometraje mayor o igual al actual del vehículo.</li>
+  <li><strong>Regla R2 (Vinculación Opcional de Pieza - RF-01):</strong> Permite asociar un repuesto del catálogo sin bloquear si se omite.</li>
+  <li><strong>Regla R3 (Integridad de Puntuación - RF-02 y RF-03):</strong> El directorio calcula promedios dentro del rango estricto de 1.0 a 5.0 estrellas.</li>
+  <li><strong>Regla R4 (Compatibilidad Técnica - RF-04):</strong> Filtra piezas coincidentes por modelo o repuestos de aplicación "Universal".</li>
+  <li><strong>Regla R5 (Validación de Maqueta y RLS - RNF-02 y RNF-03):</strong> Exige 16 dígitos de tarjeta y 3 de CVV; la base de datos restringe mutaciones no autorizadas por RLS.</li>
 </ul>
 
 <h2>9.2. Matriz de Casos de Prueba Reales Ejecutados</h2>
@@ -995,7 +1154,7 @@ Admin --> UC_AprobarTaller
       <td><strong>T02</strong><br>(R1 - Límite)</td>
       <td>Bitácora: Mazda 3, Km ingresado 45.000 (inferior al actual de 48.230 km).</td>
       <td>Rechazada: Bloqueo de envío por inconsistencia física de odómetro.</td>
-      <td><strong>Rechazada (Defecto D1 corregido):</strong> Guarda preventiva en <code>bitacora/page.tsx</code> lanza <code>toast.error</code> y bloquea submit.</td>
+      <td><strong>Rechazada (Defecto D1 corregido):</strong> Guarda preventiva en <code>bitacora/page.tsx</code> lanza <code>toast.error</code> y bloquea <code>submit()</code>.</td>
       <td style="color: #166534; font-weight: bold; text-align: center;">Sí</td>
     </tr>
     <tr>
@@ -1037,7 +1196,7 @@ Admin --> UC_AprobarTaller
       <td><strong>T08</strong><br>(R5 - RLS)</td>
       <td>Seguridad: Intento de insertar en <code>registros_bitacora</code> con auto ajeno.</td>
       <td>Rechazada: Política RLS <code>registros_bitacora_crud_own</code> deniega la escritura.</td>
-      <td><strong>Rechazada:</strong> Supabase retorna error de violación de políticas de seguridad por fila.</td>
+      <td><strong>Rechazada:</strong> Supabase retorna error de violación de políticas de seguridad por fila (código <code>42501</code>).</td>
       <td style="color: #166534; font-weight: bold; text-align: center;">Sí</td>
     </tr>
   </tbody>
@@ -1068,60 +1227,82 @@ Admin --> UC_AprobarTaller
 
 <h2>9.3. Registro y Corrección de Defectos en el Código Fuente</h2>
 
+<p>Durante la auditoría y ejecución de los casos de prueba, se detectaron y corrigieron formalmente dos defectos de lógica de negocio y validación:</p>
+
 <h3>Defecto D1: Validación de Kilometraje en Bitácora (RF-01, Regla R1)</h3>
-<p><strong>Condición:</strong> Detectado en el caso <strong>T02</strong> al verificar que el modal permitía registrar kilometrajes inferiores al odómetro actual registrado en el vehículo (por ejemplo, registrar 45.000 km cuando el auto ya registraba 48.230 km), generando inconsistencia cronológica.</p>
-<p><strong>Corrección Aplicada:</strong> En <code>src/app/bitacora/page.tsx</code>, dentro de la función <code>submit()</code> de <code>MaintenanceDialog</code>, se añadió la guarda previa que bloquea la mutación hacia Supabase:</p>
+<p><strong>Condición del Fallo:</strong> Detectado en el caso de frontera <strong>T02</strong> al verificar que el modal de registro permitía ingresar kilometrajes inferiores al odómetro registrado del vehículo (por ejemplo, ingresar 45.000 km cuando el auto ya registraba 48.230 km), provocando una inconsistencia física y temporal en el historial vehicular.</p>
+<p><strong>Corrección Aplicada:</strong> En <code>src/app/bitacora/page.tsx</code>, dentro de la función <code>submit()</code> del componente <code>MaintenanceDialog</code>, se añadió una guarda previa a la mutación en Supabase que compara el valor numérico <code>kmN</code> contra <code>activeVehicle.odometer</code>, bloqueando la acción e informando al usuario mediante notificación <code>toast.error</code>:</p>
 
 <table class="diff-table">
+  <colgroup><col style="width: 50%;"><col style="width: 50%;"></colgroup>
   <tr>
-    <td class="diff-before" style="width: 50%;">
-      <strong>Código Antes (Vulnerable a inconsistencia):</strong><br>
-      const kmN = Number(f.km);<br>
-      if (!f.title.trim()) return setErr("Describe el servicio.");<br>
-      if (!kmN) return setErr("Ingresa el kilometraje.");<br>
-      setSaving(true);
+    <td class="diff-before">
+      <span class="diff-header-before">Código Antes (Vulnerable a inconsistencia temporal):</span>
+      <pre class="code-snippet snippet-red">const submit = async () =&gt; {{
+  const kmN = Number(f.km);
+  if (!f.title.trim()) return setErr(&quot;Describe el servicio realizado.&quot;);
+  if (!kmN) return setErr(&quot;Ingresa el kilometraje.&quot;);
+  setSaving(true);
+  setErr(&quot;&quot;);</pre>
     </td>
-    <td class="diff-after" style="width: 50%;">
-      <strong>Código Corregido (Con guarda de odómetro):</strong><br>
-      const kmN = Number(f.km);<br>
-      if (!f.title.trim()) return setErr("Describe el servicio.");<br>
-      if (!kmN) return setErr("Ingresa el kilometraje.");<br>
-      <strong>if (kmN &lt; activeVehicle.odometer) {{<br>
-      &nbsp;&nbsp;toast.error(`El kilometraje (${{kmN}} km) no puede ser inferior al actual (${{activeVehicle.odometer}} km).`);<br>
-      &nbsp;&nbsp;return;<br>
-      }}</strong><br>
-      setSaving(true);
+    <td class="diff-after">
+      <span class="diff-header-after">Código Corregido (Con guarda de odómetro mínimo):</span>
+      <pre class="code-snippet snippet-green">const submit = async () =&gt; {{
+  const kmN = Number(f.km);
+  if (!f.title.trim()) return setErr(&quot;Describe el servicio realizado.&quot;);
+  if (!kmN) return setErr(&quot;Ingresa el kilometraje.&quot;);
+  if (kmN &lt; activeVehicle.odometer) {{
+    toast.error(`El kilometraje ingresado (${{kmN}} km) no puede ser inferior al actual (${{activeVehicle.odometer}} km).`);
+    return;
+  }}
+  setSaving(true);
+  setErr(&quot;&quot;);</pre>
     </td>
   </tr>
 </table>
 
+<div style="margin-top: 14px;"></div>
+
 <h3>Defecto D2: Validación Estricta de Tarjeta y CVV en Checkout (RNF-03, Regla R5)</h3>
-<p><strong>Condición:</strong> Detectado en el caso <strong>T07</strong> al comprobar que el botón para avanzar a la animación de pago procesaba la acción con tarjetas incompletas de 15 dígitos o CVVs de 2 dígitos.</p>
-<p><strong>Corrección Aplicada:</strong> En <code>src/components/motrick/Checkout.tsx</code>, se integró el controlador <code>handleProceedToPayment()</code> que sanitiza espacios y valida la longitud estricta de ambos campos:</p>
+<p><strong>Condición del Fallo:</strong> Detectado en el caso de límite <strong>T07</strong> al comprobar que el botón CTA de pago permitía hacer clic y avanzar hacia la animación bancaria con tarjetas incompletas de 15 dígitos o CVVs de 2 dígitos, descansando únicamente en la visualización pasiva de mensajes de error.</p>
+<p><strong>Corrección Aplicada:</strong> En <code>src/components/motrick/Checkout.tsx</code>, se reemplazó el manejador directo por la función controladora <code>handleProceedToPayment()</code>, la cual sanitiza los espacios del número de tarjeta mediante expresión regular (<code>replace(/\\s/g, "")</code>) y valida la longitud estricta de 16 caracteres y los 3 dígitos del CVV:</p>
 
 <table class="diff-table">
+  <colgroup><col style="width: 50%;"><col style="width: 50%;"></colgroup>
   <tr>
-    <td class="diff-before" style="width: 50%;">
-      <strong>Código Antes (Validación pasiva):</strong><br>
-      &lt;Button<br>
-      &nbsp;&nbsp;variant="cta"<br>
-      &nbsp;&nbsp;onClick={{() =&gt; {{ setTouched(true); if (valid) setStep(2); }}}}<br>
-      &gt;<br>
-      &nbsp;&nbsp;Pagar {{cop(total)}}<br>
-      &lt;/Button&gt;
+    <td class="diff-before">
+      <span class="diff-header-before">Código Antes (Validación pasiva sin bloqueo estricto):</span>
+      <pre class="code-snippet snippet-red">&lt;Button 
+  variant=&quot;cta&quot; 
+  size=&quot;lg&quot; 
+  className=&quot;h-12 flex-1&quot; 
+  onClick={{() =&gt; {{ setTouched(true); if (valid) setStep(2); }}}}
+&gt;
+  &lt;Lock className=&quot;h-4 w-4&quot; /&gt; Pagar {{cop(total)}}
+&lt;/Button&gt;</pre>
     </td>
-    <td class="diff-after" style="width: 50%;">
-      <strong>Código Corregido (Validación estricta con toast):</strong><br>
-      <strong>const handleProceedToPayment = () =&gt; {{<br>
-      &nbsp;&nbsp;setTouched(true);<br>
-      &nbsp;&nbsp;const raw = card.number.replace(/\\s/g, "");<br>
-      &nbsp;&nbsp;if (raw.length !== 16 || card.cvv.trim().length !== 3) {{<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;toast.error("Ingrese tarjeta de 16 dígitos y CVV de 3 dígitos.");<br>
-      &nbsp;&nbsp;&nbsp;&nbsp;return;<br>
-      &nbsp;&nbsp;}}<br>
-      &nbsp;&nbsp;if (!valid) return;<br>
-      &nbsp;&nbsp;setStep(2);<br>
-      }};</strong>
+    <td class="diff-after">
+      <span class="diff-header-after">Código Corregido (Controlador handleProceedToPayment con bloqueo):</span>
+      <pre class="code-snippet snippet-green">const handleProceedToPayment = () =&gt; {{
+  setTouched(true);
+  const raw = card.number.replace(/\\s/g, &quot;&quot;);
+  if (raw.length !== 16 || card.cvv.trim().length !== 3) {{
+    toast.error(&quot;Ingrese una tarjeta válida de 16 dígitos y un CVV de 3 dígitos.&quot;);
+    return;
+  }}
+  if (!valid) return;
+  setStep(2);
+}};
+
+// En el botón JSX:
+&lt;Button 
+  variant=&quot;cta&quot; 
+  size=&quot;lg&quot; 
+  className=&quot;h-12 flex-1&quot; 
+  onClick={{handleProceedToPayment}}
+&gt;
+  &lt;Lock className=&quot;h-4 w-4&quot; /&gt; Pagar {{cop(total)}}
+&lt;/Button&gt;</pre>
     </td>
   </tr>
 </table>
@@ -1145,6 +1326,29 @@ Admin --> UC_AprobarTaller
   <em>"El equipo de desarrollo aprueba unánimemente la liberación del MVP de Motrick a producción tras verificar y corregir los defectos D1 (validación de kilometraje mínimo en T02) y D2 (longitud estricta de tarjeta en checkout simulado en T07). El 100% de los casos de prueba iniciales (T01-T08), las pruebas de la regla de verificación (N01-N02) y las pruebas de regresión (T04, T08) operan satisfactoriamente sobre Next.js y el cluster de PostgreSQL en Supabase."</em>
 </div>
 
+<h2>9.6. Criterio de Verificación vs. Validación en Motrick</h2>
+<p>En el marco formal de la ingeniería de software y la rúbrica de aseguramiento de calidad del proyecto, es indispensable sustentar la diferencia conceptual y práctica entre ambos procesos aplicados a Motrick:</p>
+
+<ul>
+  <li>
+    <strong>Verificación (<em>"¿Estamos construyendo el producto correctamente?"</em>):</strong> Es una actividad de rigor técnico y disciplina formal enfocada en constatar que el software cumple cabalmente con las especificaciones técnicas, restricciones de diseño y reglas de ingeniería establecidas. En Motrick, la verificación se comprobó empíricamente mediante:
+    <ul>
+      <li>La evaluación y rechazo de violaciones de dominio en PostgreSQL (código de error <code>23514</code> por restricción <code>CHECK (puntuacion &gt;= 1 AND puntuacion &lt;= 5)</code>).</li>
+      <li>El blindaje de mutaciones arbitrarias o no autorizadas a nivel de motor SQL mediante políticas de seguridad por fila (RLS, código <code>42501</code>).</li>
+      <li>La confirmación estricta de orden cronológico en odómetros (guardas de control en <code>submit()</code> para <code>kmN &gt;= activeVehicle.odometer</code>).</li>
+      <li>La sanitización y bloqueo riguroso en el checkout (16 dígitos de tarjeta y 3 de CVV) y la compilación exitosa con cero errores de tipado estricto en TypeScript.</li>
+    </ul>
+  </li>
+  <li>
+    <strong>Validación (<em>"¿Estamos construyendo el producto correcto?"</em>):</strong> Es una actividad orientada al usuario y al valor comercial, centrada en comprobar que el software satisface las necesidades reales, expectativas y dolores de los interesados identificados en la etapa de elicitación. En Motrick, la validación se confirmó mediante:
+    <ul>
+      <li>La mitigación directa de la desconfianza estructural en talleres mecánicos (identificada en el 67% de conductores según el estudio AAA) a través de perfiles auditados, reseñas reales y el canal de verificación formal (RF-05).</li>
+      <li>La solución efectiva al temor del 53.1% de usuarios a compras incompatibles (ASOPARTES) mediante la categorización dinámica de autopartes compatibles con el vehículo seleccionado (RF-04).</li>
+      <li>La resolución a la falta de control histórico del 75.5% de conductores que no llevan registro o guardan recibos físicos, transfiriéndoles el poder de un garaje digital y bitácora técnica centralizada (RF-01).</li>
+    </ul>
+  </li>
+</ul>
+
 <div class="page-break"></div>
 
 <!-- ==================== CAPITULO 10 ==================== -->
@@ -1156,6 +1360,10 @@ Admin --> UC_AprobarTaller
 
 <p style="padding-left: 28px; text-indent: -28px;">
   Asociación del Sector Automotriz y sus Partes [ASOPARTES] y FENALCO. (2023). <em>Informe del comportamiento del sector automotor y autopartes en Colombia</em>. Balances Oficiales del Sector Automotor. Recuperado de: <a href="https://www.fenalco.com.co/blog/gremial-4/informe-del-sector-automotor-a-junio-2023-1268">https://www.fenalco.com.co/</a>
+</p>
+
+<p style="padding-left: 28px; text-indent: -28px;">
+  Boehm, B. W. (1981). <em>Software Engineering Economics</em>. Prentice-Hall. Englewood Cliffs, NJ.
 </p>
 
 <p style="padding-left: 28px; text-indent: -28px;">
@@ -1172,6 +1380,10 @@ Admin --> UC_AprobarTaller
 
 <p style="padding-left: 28px; text-indent: -28px;">
   Palmer, S. R., &amp; Felsing, J. M. (2002). <em>A Practical Guide to Feature-Driven Development</em>. Prentice Hall PTR. Upper Saddle River, NJ.
+</p>
+
+<p style="padding-left: 28px; text-indent: -28px;">
+  Pressman, R. S., &amp; Maxim, B. R. (2020). <em>Software Engineering: A Practitioner's Approach</em> (9th ed.). McGraw-Hill Education. New York, NY.
 </p>
 
 <p style="padding-left: 28px; text-indent: -28px;">
@@ -1214,6 +1426,47 @@ def main():
     if os.path.exists(pdf_file) and os.path.getsize(pdf_file) > 0:
         size_kb = os.path.getsize(pdf_file) / 1024
         print(f"[EXITO] PDF generado exitosamente: {pdf_file} ({size_kb:.1f} KB)")
+        
+        # Analizar paginación real
+        try:
+            reader = pypdf.PdfReader(pdf_file)
+            print(f"Total de páginas en el PDF generado: {len(reader.pages)}")
+            
+            # Mapeo de capítulos a páginas
+            targets = [
+                ("1. Propósito", "Capítulo 1"),
+                ("2. Identificación de Interesados", "Capítulo 2"),
+                ("3. Técnicas de Elicitación", "Capítulo 3"),
+                ("4. Muestras de las Herramientas", "Capítulo 4"),
+                ("5. Especificación de Requerimientos", "Capítulo 5"),
+                ("6. Priorización de Requerimientos", "Capítulo 6"),
+                ("7. Modelado UML", "Capítulo 7"),
+                ("7.1. Diagrama de Casos de Uso", "Sección 7.1"),
+                ("7.2. Modelos Arquitectónicos", "Sección 7.2"),
+                ("7.3. Matriz de Validación", "Sección 7.3"),
+                ("8. Gestión Ágil", "Capítulo 8"),
+                ("8.3. Tablero de Trabajo", "Sección 8.3"),
+                ("9. Validación y Pruebas", "Capítulo 9"),
+                ("9.1. Reglas de Negocio", "Sección 9.1"),
+                ("9.2. Matriz de Casos de Prueba", "Sección 9.2"),
+                ("9.3. Registro y Corrección de Defectos", "Sección 9.3"),
+                ("9.4. Simulación de Cambio", "Sección 9.4"),
+                ("9.5. Revisión Cruzada", "Sección 9.5"),
+                ("9.6. Criterio de Verificación", "Sección 9.6"),
+                ("10. Referencias", "Capítulo 10")
+            ]
+            
+            print("\n--- Mapeo de Páginas Reales ---")
+            for pattern, name in targets:
+                found_page = None
+                for i, p in enumerate(reader.pages):
+                    txt = p.extract_text() or ""
+                    if pattern in txt:
+                        found_page = i + 1
+                        break
+                print(f"{name: <35}: Página {found_page}")
+        except Exception as e:
+            print("No se pudo inspeccionar el PDF:", e)
     else:
         print("Error al generar PDF:", res.stderr)
 

@@ -20,16 +20,18 @@ Cartagena de Indias, Bolívar
 # ÍNDICE GENERAL
 
 1. [Capítulo 1: Marco de Negocio y Fundamentación Jurídica](#capítulo-1-marco-de-negocio-y-fundamentación-jurídica)  
-   1.5. [Modelo de Negocio y Deslinde de Responsabilidad Legal (Ley 1480 de 2011)](#15-modelo-de-negocio-y-deslinde-de-responsabilidad-legal-ley-1480-de-2011)  
+   1.5. [Modelo de Negocio y Marco Jurídico Institucional](#15-modelo-de-negocio-y-marco-jurídico-institucional)  
+   1.5.1. [Prevención de Solidaridad Jurídica y Portal de Contacto (Art. 53, Ley 1480 de 2011)](#151-prevención-de-solidaridad-jurídica-y-portal-de-contacto-art-53-ley-1480-de-2011)  
    1.5.2. [Publicidad Nativa Contextual y Política de Brand Safety (RNF-04)](#152-publicidad-nativa-contextual-y-política-de-brand-safety-rnf-04)  
 2. [Capítulo 5: Especificación de Requerimientos de Software](#capítulo-5-especificación-de-requerimientos-de-software)  
    5.1. [Requerimientos Funcionales (RF-01 a RF-05)](#51-requerimientos-funcionales-rf-01-a-rf-05)  
    5.2. [Requerimientos No Funcionales (RNF-01 a RNF-04)](#52-requerimientos-no-funcionales-rnf-01-a-rnf-04)  
 3. [Capítulo 7: Modelado UML y Matriz de Validación](#capítulo-7-modelado-uml-y-matriz-de-validación)  
    7.1. [Diagrama de Casos de Uso Actualizado (Figura 1)](#71-diagrama-de-casos-de-uso-actualizado-figura-1)  
+   7.2. [Modelos Arquitectónicos y Estructurales UML del Sistema (Figuras 2 a 8)](#72-modelos-arquitectónicos-y-estructurales-uml-del-sistema-figuras-2-a-8)  
    7.3. [Matriz de Validación y Ajustes Metodológicos](#73-matriz-de-validación-y-ajustes-metodológicos)  
 4. [Capítulo 8: Gestión Ágil (FDD) y Control de Versiones](#capítulo-8-gestión-ágil-fdd-y-control-de-versiones)  
-   8.1. [Tablero de Trabajo FDD (Figura 2)](#81-tablero-de-trabajo-fdd-figura-2)  
+   8.1. [Tablero de Trabajo FDD (Figura 9)](#81-tablero-de-trabajo-fdd-figura-9)  
    8.2. [Repositorio, Ramas y Trazabilidad Git](#82-repositorio-ramas-y-trazabilidad-git)  
 5. [Capítulo 9: Validación y Pruebas de Software](#capítulo-9-validación-y-pruebas-de-software)  
    9.1. [Reglas de Negocio Acordadas y Datos Base (seed.sql)](#91-reglas-de-negocio-acordadas-y-datos-base-seedsql)  
@@ -37,16 +39,17 @@ Cartagena de Indias, Bolívar
    9.3. [Registro y Corrección de Defectos (D1 y D2)](#93-registro-y-corrección-de-defectos-d1-y-d2)  
    9.4. [Simulación de Cambio y Pruebas de Regresión (Regla R6)](#94-simulación-de-cambio-y-pruebas-de-regresión-regla-r6)  
    9.5. [Revisión Cruzada y Decisión de Liberación](#95-revisión-cruzada-y-decisión-de-liberación)  
+   9.6. [Criterio de Verificación vs. Validación en Motrick](#96-criterio-de-verificación-vs-validación-en-motrick)  
 
 ---
 
 # Capítulo 1: Marco de Negocio y Fundamentación Jurídica
 
-## 1.5. Modelo de Negocio y Deslinde de Responsabilidad Legal (Ley 1480 de 2011)
+## 1.5. Modelo de Negocio y Marco Jurídico Institucional
 
 Motrick implementa un modelo de monetización B2B basado en membresías de visibilidad para talleres mecánicos y pauta publicitaria nativa, **descartando el cobro de comisiones sobre reparaciones**.
 
-### Prevención de Solidaridad Jurídica
+### 1.5.1. Prevención de Solidaridad Jurídica y Portal de Contacto (Art. 53, Ley 1480 de 2011)
 De acuerdo con el **Artículo 53 de la Ley 1480 de 2011 (Estatuto del Consumidor en Colombia)**, la plataforma califica como **portal de contacto e intermediación informativa**. Si Motrick recaudara el valor del servicio de mano de obra o comisionara sobre el arreglo mecánico, la Superintendencia de Industria y Comercio (SIC) la consideraría prestador solidario, debiendo responder económicamente ante fallas mecánicas, averías colaterales o garantías no atendidas por el taller. 
 
 Al limitar los ingresos al canon de visibilidad y verificación, la relación contractual por el servicio automotriz se suscribe directa y exclusivamente entre el propietario del vehículo y el taller mecánico contratado.
@@ -211,54 +214,33 @@ flowchart LR
     UC10 --> Sys
 ```
 
-### Especificación PlantUML del Diagrama de Casos de Uso
-```plantuml
-@startuml Motrick_Casos_Uso_Actualizado
-left to right direction
-skinparam packageStyle rectangle
-skinparam shadowing false
-
-actor "Usuario\n(Propietario)" as User
-actor "Mecánico / Taller" as Mech
-actor "Administrador\n(Equipo Motrick)" as Admin
-actor "Sistema Motrick\n(Gestión DB)" as Sys
-
-rectangle "Plataforma Motrick (MVP)" {
-  usecase "Buscar repuestos por vehículo" as UC_Repuestos
-  usecase "Simular compra de repuestos" as UC_Checkout
-  usecase "Filtrar mecánicos y talleres" as UC_Directorio
-  usecase "Consultar valoraciones y reseñas" as UC_Valoraciones
-  usecase "Solicitar verificación de taller" as UC_SolicitarVerif
-  usecase "Registrar mantenimiento en bitácora" as UC_RegistrarBitacora
-  usecase "Vincular repuesto del catálogo" as UC_VincularPieza
-  usecase "Consultar historial vehicular" as UC_Historial
-  usecase "Gestionar Catálogo y Directorio" as UC_GestionCatalogo
-  usecase "Verificar y aprobar talleres" as UC_AprobarTaller
-}
-
-User --> UC_Repuestos
-User --> UC_Directorio
-User --> UC_Valoraciones
-User --> UC_RegistrarBitacora
-User --> UC_Historial
-
-UC_Checkout .> UC_Repuestos : <<extend>>
-UC_VincularPieza .> UC_RegistrarBitacora : <<extend>>
-
-Mech --> UC_SolicitarVerif
-Admin --> UC_GestionCatalogo
-Admin --> UC_AprobarTaller
-
-UC_Repuestos --> Sys
-UC_Directorio --> Sys
-UC_RegistrarBitacora --> Sys
-UC_AprobarTaller --> Sys
-@enduml
-```
-
 **Figura 1**  
-*Diagrama de Casos de Uso Actualizado con Módulo de Verificación y Rol Administrador*  
+*Diagrama de Casos de Uso Actualizado con Módulo de Verificación (RF-05) y Rol Administrador*  
 *Nota.* Elaboración propia (2026) basada en los requerimientos del MVP de Motrick, incorporando relaciones `<<extend>>` para el checkout y la vinculación de piezas, e interacciones del actor Administrador y Mecánico bajo la Ley 1480 de 2011.
+
+---
+
+## 7.2. Modelos Arquitectónicos y Estructurales UML del Sistema (Figuras 2 a 8)
+
+Para consolidar el **Pilar 3 (Modelado UML y Diseño Arquitectónico)** evaluado en el proyecto de aula, se integran los modelos arquitectónicos completos desarrollados a lo largo del semestre:
+
+### 7.2.1. Diagrama de Clases del Sistema (Figura 2)
+Modela la estructura estática del sistema, niveles de visibilidad, atributos tipados y operaciones de negocio. Define la generalización de la clase abstracta `Usuario` hacia `Cliente` y `Mecánico`, junto a las relaciones con `Vehículo`, `RegistroBitacora`, `Repuesto` y `Valoración`.
+
+### 7.2.2. Diagramas de Secuencia del Sistema (Figuras 3, 4 y 5)
+Ilustran la interacción temporal entre Usuario, Frontend (Next.js/React), Backend API y base de datos relacional Supabase (PostgreSQL Cloud) para los 3 flujos clave:
+* **Figura 3 (Búsqueda de Repuestos por Vehículo - RF-04):** Secuencia descendente de consultas parametrizadas de catálogo según marca y modelo.
+* **Figura 4 (Registro en la Bitácora de Mantenimiento - RF-01):** Validación de sesión y persistencia transaccional del servicio técnico en `registros_bitacora`.
+* **Figura 5 (Simulación de Compra de Repuestos y Pasarela de Pago - RNF-03):** Flujo simulado de pago interactivo en 4 pasos con validación estricta de tarjeta.
+
+### 7.2.3. Diagrama de Actividades (Figura 6)
+Modela el flujo procedural de registro en bitácora con un nodo de decisión (rombo) que evalúa si el mantenimiento incluye la vinculación opcional de una pieza del catálogo antes de consolidar el historial del automóvil.
+
+### 7.2.4. Diagrama de Componentes (Figura 7)
+Vista física modular dividida en: Interfaz de Usuario (Caja Blanca) con submódulos de Directorio, Buscador y Bitácora; y Servicios de Servidor / Supabase BaaS (Caja Negra) interconectados vía HTTP/REST y SDK oficial.
+
+### 7.2.5. Diagrama de Despliegue (Figura 8)
+Topología de nodos en la nube: Dispositivo Cliente (Navegador/App), Servidor Cloud (Vercel con Node.js y React) e Infraestructura BaaS (Supabase Cloud con PostgreSQL y Auth) comunicados bajo HTTPS y TCP/IP.
 
 ---
 
@@ -278,18 +260,19 @@ UC_AprobarTaller --> Sys
 
 ![Tablero de Gestión Ágil (FDD) en Estado de Cierre de Iteración del MVP de Motrick](../Trello.png)
 
-**Figura 2**  
+**Figura 9**  
 *Tablero de Gestión Ágil (FDD) en Estado de Cierre de Iteración del MVP de Motrick*  
 *Nota.* Elaboración propia en Trello (2026). Refleja el 100% de los requerimientos completados para el corte evaluativo, distribuidos equitativamente entre Alejandro Paternina (AP) y Johan Brieva (JF):
 * **Setup de Arquitectura** (AP)
 * **RF-01: Registrar mantenimiento en bitácora** (JF)
 * **RF-02: Filtrar directorio de talleres** (JF)
-* **RF-04: Buscar repuestos por categoría** (AP)
-* **RNF-01: Arquitectura Full-Stack Next.js** (AP)
-* **RNF-02: Persistencia en Supabase** (JF)
 * **RF-03: Consultar valoraciones de mecánicos** (AP)
-* **RNF-03: Mockups de Transacciones** (AP)
+* **RF-04: Buscar repuestos por categoría y compatibilidad** (AP)
 * **RF-05: Verificación y validación de talleres mecánicos** (AP / JF)
+* **RNF-01: Arquitectura Full-Stack Next.js** (AP)
+* **RNF-02: Persistencia en Supabase con RLS** (JF)
+* **RNF-03: Mockups de Transacciones y Checkout** (AP)
+* **RNF-04: Visualización de publicidad nativa contextual y Brand Safety** (AP)
 
 ## 8.2. Repositorio, Ramas y Trazabilidad Git
 * **Repositorio Central:** [https://github.com/AlejoPB22/Motrik](https://github.com/AlejoPB22/Motrik)
@@ -410,3 +393,20 @@ Se reejecutaron **T04** (Filtros de directorio) y **T08** (Políticas RLS), comp
 
 ### Declaración Formal de Liberación a Producción:
 > *"El equipo de ingeniería aprueba unánimemente la liberación del MVP de Motrick a producción tras verificar y corregir los defectos D1 (validación de kilometraje mínimo en T02) y D2 (longitud estricta de tarjeta en checkout simulado en T07). El 100% de los casos de prueba iniciales (T01-T08), las pruebas de la regla de verificación (N01-N02) y las pruebas de regresión (T04, T08) operan satisfactoriamente sobre Next.js y el cluster de PostgreSQL en Supabase."*
+
+---
+
+## 9.6. Criterio de Verificación vs. Validación en Motrick
+
+En el marco de la ingeniería de software y la rúbrica de aseguramiento de calidad del proyecto de aula, se formaliza la diferencia conceptual y práctica entre ambas actividades:
+
+* **Verificación (*"¿Estamos construyendo el producto correctamente?"*):** Proceso de rigor técnico y verificación estricta contra especificaciones de diseño. En Motrick, se comprobó mediante:
+  * El rechazo de violaciones de dominio en PostgreSQL (`CHECK (puntuacion >= 1 AND puntuacion <= 5)` con error `23514`).
+  * El blindaje de mutaciones arbitrarias a nivel de motor SQL mediante políticas Row-Level Security (código `42501`).
+  * La confirmación de orden cronológico en odómetros (guardas de control en `submit()` para `kmN >= activeVehicle.odometer`).
+  * La sanitización estricta en checkout (16 dígitos y 3 de CVV) y compilación limpia de Next.js sin errores de TypeScript.
+
+* **Validación (*"¿Estamos construyendo el producto correcto?"*):** Proceso orientado al valor y satisfacción de las necesidades reales de los interesados identificados en la elicitación. En Motrick, se comprobó mediante:
+  * La mitigación de la desconfianza estructural en talleres mecánicos (67% de conductores según AAA) mediante perfiles auditados, reseñas auténticas y verificación documental (RF-05).
+  * La solución al temor del 53.1% de usuarios a compras incompatibles (ASOPARTES) mediante el catálogo filtrado por modelo vehicular exacto (RF-04).
+  * La resolución a la falta de registro del 75.5% de conductores que no llevan historial o guardan facturas sueltas, proveyendo una bitácora técnica digital permanente (RF-01).
