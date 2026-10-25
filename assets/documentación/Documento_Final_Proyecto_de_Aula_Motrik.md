@@ -31,7 +31,7 @@ Cartagena de Indias, Bolívar
 4. [Capítulo 8: Gestión Ágil (FDD) y Control de Versiones](#capítulo-8-gestión-ágil-fdd-y-control-de-versiones)  
    8.1. [Tablero de Trabajo FDD (Figura 2)](#81-tablero-de-trabajo-fdd-figura-2)  
    8.2. [Repositorio, Ramas y Trazabilidad Git](#82-repositorio-ramas-y-trazabilidad-git)  
-5. [Capítulo 9: Validación y Pruebas de Software (Evidencia Real)](#capítulo-9-validación-y-pruebas-de-software-evidencia-real)  
+5. [Capítulo 9: Validación y Pruebas de Software](#capítulo-9-validación-y-pruebas-de-software)  
    9.1. [Reglas de Negocio Acordadas y Datos Base (seed.sql)](#91-reglas-de-negocio-acordadas-y-datos-base-seedsql)  
    9.2. [Matriz de Casos de Prueba Reales Ejecutados (Tabla 1)](#92-matriz-de-casos-de-prueba-reales-ejecutados-tabla-1)  
    9.3. [Registro y Corrección de Defectos (D1 y D2)](#93-registro-y-corrección-de-defectos-d1-y-d2)  
@@ -303,7 +303,7 @@ UC_AprobarTaller --> Sys
 
 ---
 
-# Capítulo 9: Validación y Pruebas de Software (Evidencia Real)
+# Capítulo 9: Validación y Pruebas de Software
 
 ## 9.1. Reglas de Negocio Acordadas y Datos Base (seed.sql)
 
