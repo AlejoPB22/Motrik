@@ -1,175 +1,108 @@
-import { createClient } from "@/utils/supabase/server";
-import { cookies } from "next/headers";
+"use client";
 
-interface TableStatus {
-  name: string;
-  label: string;
-  description: string;
-  exists: boolean;
-  hasData: boolean;
-  count: number;
-  error?: string | null;
-}
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { ArrowRight, Gauge, NotebookPen, Package, Wrench } from "lucide-react";
+import { useApp } from "@/lib/store";
+import { PARTS, cop, fitsVehicle } from "@/data/mock";
+import { Img } from "@/components/motrick/shared";
 
-const MVP_TABLES = [
-  { name: "usuarios", label: "Usuarios", description: "Perfiles base (clientes, mecánicos, admin)" },
-  { name: "mecanicos", label: "Mecánicos", description: "Especialidades y calificaciones" },
-  { name: "vehiculos", label: "Vehículos", description: "Vehículos registrados por los usuarios" },
-  { name: "repuestos", label: "Repuestos", description: "Catálogo de piezas y compatibilidad" },
-  { name: "valoraciones", label: "Valoraciones", description: "Reseñas y puntuaciones a talleres" },
-  { name: "registros_bitacora", label: "Registros de Bitácora", description: "Historial de mantenimientos" },
-];
+const MODULES = [
+  { to: "/repuestos", icon: Package, title: "Repuestos & Tienda", text: "Piezas con compatibilidad garantizada para tu modelo." },
+  { to: "/directorio", icon: Wrench, title: "Talleres y Mecánicos", text: "Compara especialidades, zonas y reseñas reales." },
+  { to: "/bitacora", icon: NotebookPen, title: "Mi Garaje / Bitácora", text: "Historial de servicios, kilometraje y piezas instaladas." },
+] as const;
 
-export default async function Page() {
-  const cookieStore = await cookies();
-  const supabase = createClient(cookieStore);
-
-  const tableStatuses: TableStatus[] = await Promise.all(
-    MVP_TABLES.map(async (table) => {
-      const { count, error } = await supabase
-        .from(table.name)
-        .select("*", { count: "exact", head: true });
-
-      if (error) {
-        return {
-          name: table.name,
-          label: table.label,
-          description: table.description,
-          exists: false,
-          hasData: false,
-          count: 0,
-          error: error.message,
-        };
-      }
-
-      const rowCount = count ?? 0;
-      return {
-        name: table.name,
-        label: table.label,
-        description: table.description,
-        exists: true,
-        hasData: rowCount > 0,
-        count: rowCount,
-        error: null,
-      };
-    })
-  );
-
-  const existingCount = tableStatuses.filter((t) => t.exists).length;
-  const withDataCount = tableStatuses.filter((t) => t.hasData).length;
+export default function HomePage() {
+  const { active } = useApp();
+  const picks = PARTS.filter((p) => fitsVehicle(p, active)).slice(0, 4);
 
   return (
-    <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center p-6">
-      <div className="max-w-2xl w-full bg-slate-900 border border-slate-800 rounded-2xl p-8 shadow-2xl">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <span className="flex h-3 w-3 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-            </span>
-            <h1 className="text-2xl font-bold tracking-tight text-white">Motrik × Supabase</h1>
-          </div>
-          <span className="text-xs px-2.5 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-full font-mono">
-            Conectado
-          </span>
-        </div>
-
-        <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-          Estado del esquema relacional en Supabase. Verificación en tiempo real de las tablas y existencia de datos en el backend.
-        </p>
-
-        {/* Sección de prueba de lectura multi-tabla */}
-        <div className="bg-slate-950/80 border border-slate-800 rounded-xl p-5 mb-6">
-          <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-800/80">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-300">
-                Prueba de Lectura del Esquema
-              </h2>
-              <span className="text-[11px] px-2 py-0.5 bg-slate-800 text-slate-400 rounded-md font-mono">
-                {existingCount}/{MVP_TABLES.length} activas
-              </span>
-            </div>
-            <span className="text-[11px] text-slate-500 font-mono">SSR Live Query</span>
-          </div>
-
-          <div className="space-y-2.5">
-            {tableStatuses.map((table) => (
-              <div
-                key={table.name}
-                className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 bg-slate-900/60 border border-slate-800/70 rounded-lg hover:border-slate-700/80 transition"
-              >
-                <div className="flex items-center gap-2.5">
-                  <span
-                    className={`h-2 w-2 rounded-full ${
-                      !table.exists
-                        ? "bg-rose-500"
-                        : table.hasData
-                        ? "bg-emerald-400"
-                        : "bg-cyan-400"
-                    }`}
-                  />
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-slate-200">{table.label}</span>
-                      <code className="text-[11px] text-slate-500 font-mono">({table.name})</code>
-                    </div>
-                    <p className="text-[11px] text-slate-400">{table.description}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2 self-start sm:self-auto">
-                  {table.exists ? (
-                    table.hasData ? (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
-                        <span>✓</span> Con datos ({table.count} {table.count === 1 ? "fila" : "filas"})
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-mono">
-                        <span>✓</span> Existe (Sin datos / 0 filas)
-                      </span>
-                    )
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20 font-mono">
-                      <span>✗</span> No existe o sin acceso
-                    </span>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-500">
-            <span>Tablas con registros: <strong className="text-slate-300 font-mono">{withDataCount}</strong></span>
-            <span>Tablas vacías (listas): <strong className="text-slate-300 font-mono">{existingCount - withDataCount}</strong></span>
-          </div>
-        </div>
-
-        {/* Enlaces a los módulos */}
-        <div className="border-t border-slate-800/80 pt-5">
-          <p className="text-xs text-slate-400 mb-3 font-medium">Módulos del MVP preparados:</p>
-          <div className="flex flex-wrap gap-2 text-xs">
-            <a
+    <div className="space-y-10">
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-3xl bg-gradient-ink p-8 text-ink-foreground md:p-12 shadow-lift"
+      >
+        <div className="relative z-10 max-w-xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] opacity-60">Hola, Alejandro</p>
+          <h1 className="mt-3 text-4xl font-semibold leading-tight md:text-5xl">Tu {active.model} {active.year}, bajo control.</h1>
+          <p className="mt-3 flex items-center gap-2 opacity-75">
+            <Gauge className="h-4 w-4" />
+            {active.odometer.toLocaleString("es-CO")} km · próximo cambio de aceite en ~1.800 km
+          </p>
+          {active.soatExpiry && (
+            <p className="mt-1.5 flex items-center gap-2 text-xs font-medium text-amber-300">
+              <span className="h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
+              SOAT vence el {new Date(active.soatExpiry + "T12:00").toLocaleDateString("es-CO", { day: "numeric", month: "short" })}
+              {active.tecnoExpiry && ` · Tecnomecánica el ${new Date(active.tecnoExpiry + "T12:00").toLocaleDateString("es-CO", { day: "numeric", month: "short" })}`}
+            </p>
+          )}
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
               href="/repuestos"
-              className="px-3 py-2 bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white rounded-lg transition border border-slate-700/50"
+              className="inline-flex h-11 items-center gap-2 rounded-full bg-cta px-6 text-sm font-semibold text-cta-foreground transition hover:brightness-105"
             >
-              Buscador de Repuestos →
-            </a>
-            <a
-              href="/directorio"
-              className="px-3 py-2 bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white rounded-lg transition border border-slate-700/50"
-            >
-              Directorio de Talleres →
-            </a>
-            <a
+              Comprar repuestos <ArrowRight className="h-4 w-4" />
+            </Link>
+            <Link
               href="/bitacora"
-              className="px-3 py-2 bg-slate-800/80 hover:bg-slate-700/80 text-slate-300 hover:text-white rounded-lg transition border border-slate-700/50"
+              className="inline-flex h-11 items-center rounded-full border border-ink-foreground/25 px-6 text-sm font-semibold transition hover:bg-ink-foreground/10"
             >
-              Bitácora de Mantenimiento →
-            </a>
+              Ver bitácora & documentos
+            </Link>
           </div>
         </div>
-      </div>
-    </main>
+        <img
+          src={active.image}
+          alt=""
+          className="absolute inset-y-0 right-0 hidden h-full w-1/2 object-cover opacity-50 [mask-image:linear-gradient(to_right,transparent,black_50%)] md:block"
+        />
+      </motion.section>
+
+      <section className="grid gap-4 md:grid-cols-3">
+        {MODULES.map((m, i) => (
+          <motion.div key={m.to} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.05 }}>
+            <Link
+              href={m.to}
+              className="group flex h-full flex-col rounded-2xl border border-border bg-card p-6 shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-lift"
+            >
+              <div className="grid h-10 w-10 place-items-center rounded-xl bg-accent text-accent-foreground">
+                <m.icon className="h-5 w-5" />
+              </div>
+              <h2 className="mt-4 text-lg font-semibold">{m.title}</h2>
+              <p className="mt-1 flex-1 text-sm text-muted-foreground">{m.text}</p>
+              <span className="mt-4 flex items-center gap-1 text-sm font-medium text-primary">
+                Entrar <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </span>
+            </Link>
+          </motion.div>
+        ))}
+      </section>
+
+      <section>
+        <div className="mb-4 flex items-end justify-between">
+          <h2 className="text-xl font-semibold">Compatibles con tu {active.model}</h2>
+          <Link href="/repuestos" className="text-sm font-medium text-primary hover:underline">
+            Ver todos
+          </Link>
+        </div>
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-5">
+          {picks.map((p) => (
+            <Link
+              key={p.id}
+              href={`/repuestos?part=${p.id}`}
+              className="group overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-all hover:shadow-lift"
+            >
+              <Img src={p.images[0] ?? ""} alt={p.name} className="aspect-square" />
+              <div className="p-4">
+                <p className="line-clamp-1 text-sm font-medium">{p.name}</p>
+                <p className="mt-1 font-semibold text-foreground">{cop(p.price)}</p>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+    </div>
   );
 }
-
