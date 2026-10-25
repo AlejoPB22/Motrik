@@ -7,9 +7,116 @@ import { Suspense, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { SPECIALTIES, WORKSHOPS, ZONES, type Specialty } from "@/data/mock";
+import { SPECIALTIES, WORKSHOPS, ZONES, type Review, type Specialty, type Workshop } from "@/data/mock";
 import { Chip, Img, PageHeader, Stars } from "@/components/motrick/shared";
 import { toast } from "sonner";
+import { createClient } from "@/utils/supabase/client";
+import { useEffect } from "react";
+
+function getWorkshopImage(especialidad?: string | null): string {
+  const s = (especialidad || "").toLowerCase();
+  if (s.includes("freno")) return "/assets/wheel.jpg";
+  if (s.includes("motor")) return "/assets/engine.jpg";
+  if (s.includes("suspens")) return "/assets/disc.jpg";
+  if (s.includes("eléctr") || s.includes("electr")) return "/assets/battery.jpg";
+  return "/assets/shop.jpg";
+}
+
+interface DbValoracion {
+  id?: number | string;
+  puntuacion: number | string;
+  comentario?: string | null;
+  fecha?: string | null;
+  cliente?: { nombre?: string | null } | { nombre?: string | null }[] | null;
+}
+
+interface DbMecanico {
+  id: string | number;
+  especialidad?: string | null;
+  ubicacion?: string | null;
+  calificacion_promedio?: number | string | null;
+  foto_url?: string | null;
+  telefono?: string | null;
+  horario?: string | null;
+  anos_experiencia?: number | string | null;
+  descripcion?: string | null;
+  usuarios?:
+    | {
+        nombre?: string | null;
+        correo?: string | null;
+      }
+    | {
+        nombre?: string | null;
+        correo?: string | null;
+      }[]
+    | null;
+  valoraciones?: DbValoracion[] | null;
+}
+
+function mapDbMecanicoToWorkshop(m: DbMecanico): Workshop {
+  const userObj = Array.isArray(m.usuarios) ? m.usuarios[0] : m.usuarios;
+  const nombreTaller = userObj?.nombre || "Taller Especializado Motrick";
+  const ubicacionStr = m.ubicacion || "Chapinero · Carrera 13 #54-21";
+  const parts = ubicacionStr.split(/[·,]/);
+  const zone = parts[0]?.trim() || "Bogotá";
+  const address = parts.slice(1).join(",").trim() || ubicacionStr;
+
+  // Cálculo de calificación promedio a partir de los datos registrados en la tabla 'valoraciones'
+  const vals = Array.isArray(m.valoraciones) ? m.valoraciones : [];
+  let avgRating = Number(m.calificacion_promedio) || 5.0;
+  if (vals.length > 0) {
+    const sum = vals.reduce((acc: number, v: DbValoracion) => acc + (Number(v.puntuacion) || 5), 0);
+    avgRating = Number((sum / vals.length).toFixed(1));
+  }
+
+  const reviewCount = vals.length > 0 ? vals.length : (Number(m.calificacion_promedio) ? 14 : 0);
+
+  const reviews: Review[] = vals.length > 0
+    ? vals.map((v: DbValoracion, idx: number) => {
+        const cObj = Array.isArray(v.cliente) ? v.cliente[0] : v.cliente;
+        return {
+          id: String(v.id || idx),
+          author: cObj?.nombre || `Conductor Motrick #${idx + 1}`,
+          avatar: `https://i.pravatar.cc/80?img=${(idx % 30) + 1}`,
+          date: v.fecha ? String(v.fecha).slice(0, 10) : "2026-09-18",
+          rating: Number(v.puntuacion) || 5,
+          text: v.comentario || "Excelente servicio, diagnóstico claro y repuestos de primera calidad.",
+          vehicle: "Vehículo verificado",
+        };
+      })
+    : [
+        {
+          id: `r-default-${m.id}`,
+          author: "Cliente Verificado",
+          avatar: "https://i.pravatar.cc/80?img=12",
+          date: "2026-09-15",
+          rating: Math.round(avgRating),
+          text: "Excelente servicio técnico y cumplimiento con el tiempo pactado.",
+          vehicle: "Mazda 3",
+        },
+      ];
+
+  const specList: Specialty[] = m.especialidad
+    ? (m.especialidad.split(/[,;/]+/).map((s: string) => s.trim()) as Specialty[])
+    : ["Mantenimiento preventivo"];
+
+  return {
+    id: String(m.id),
+    name: nombreTaller,
+    zone,
+    address,
+    image: m.foto_url || getWorkshopImage(m.especialidad),
+    verified: true,
+    specialties: specList,
+    rating: avgRating,
+    reviewCount: Math.max(reviewCount, 1),
+    hours: m.horario || "Lun–Sáb 7:30–18:00",
+    phone: m.telefono || "+57 601 345 7788",
+    years: Number(m.anos_experiencia) || 12,
+    about: m.descripcion || `Taller especializado en ${m.especialidad || "mantenimiento automotriz"} con técnicos calificados en Bogotá.`,
+    reviews,
+  };
+}
 
 export default function DirectorioPage() {
   return (
@@ -27,12 +134,92 @@ function DirectorioContent() {
   const [specs, setSpecs] = useState<Specialty[]>([]);
   const [zone, setZone] = useState("all");
   const [top, setTop] = useState(false);
+  const [workshops, setWorkshops] = useState<Workshop[]>(WORKSHOPS);
+  const [loading, setLoading] = useState(true);
+
+  // Consulta SELECT a las tablas 'mecanicos', 'usuarios' y 'valoraciones' en Supabase
+  useEffect(() => {
+    let activeEffect = true;
+    async function loadDirectorio() {
+      setLoading(true);
+      try {
+        const supabase = createClient();
+        let query = supabase.from("mecanicos").select(`
+          id,
+          especialidad,
+          ubicacion,
+          calificacion_promedio,
+          foto_url,
+          telefono,
+          usuarios (
+            nombre,
+            correo
+          ),
+          valoraciones (
+            id,
+            puntuacion,
+            comentario,
+            fecha,
+            cliente:usuarios!valoraciones_cliente_id_fkey (
+              nombre
+            )
+          )
+        `);
+
+        // Filtro por especialidad técnica consultado en Supabase
+        if (specs.length === 1) {
+          query = query.ilike("especialidad", `%${specs[0]}%`);
+        }
+
+        const { data, error } = await query;
+
+        if (!activeEffect) return;
+
+        if (error) {
+          console.warn("Aviso al consultar 'mecanicos' con joins en Supabase:", error.message);
+          // Consulta fallback sencilla si las políticas RLS o foreign keys requieren formato base
+          const simple = await supabase.from("mecanicos").select("*, usuarios(nombre, correo)");
+          if (!simple.error && simple.data && simple.data.length > 0) {
+            setWorkshops(simple.data.map(mapDbMecanicoToWorkshop));
+          } else {
+            setWorkshops(WORKSHOPS);
+          }
+        } else if (data && data.length > 0) {
+          const mapped = data.map(mapDbMecanicoToWorkshop);
+          setWorkshops(mapped);
+        } else {
+          if (specs.length > 0) {
+            setWorkshops([]);
+          } else {
+            setWorkshops(WORKSHOPS);
+          }
+        }
+      } catch (e) {
+        console.error("Error en conexión con Supabase en Directorio:", e);
+        if (activeEffect) setWorkshops(WORKSHOPS);
+      } finally {
+        if (activeEffect) setLoading(false);
+      }
+    }
+
+    loadDirectorio();
+    return () => {
+      activeEffect = false;
+    };
+  }, [specs]);
 
   const list = useMemo(
-    () => WORKSHOPS.filter((w) => (zone === "all" || w.zone === zone) && (!top || w.rating >= 4) && specs.every((s) => w.specialties.includes(s))),
-    [specs, zone, top],
+    () =>
+      workshops.filter((w) => {
+        const matchZone = zone === "all" || w.zone.toLowerCase().includes(zone.toLowerCase());
+        const matchTop = !top || w.rating >= 4;
+        const matchSpecs = specs.length === 0 || specs.every((s) => w.specialties.some((ws) => ws.toLowerCase().includes(s.toLowerCase())));
+        return matchZone && matchTop && matchSpecs;
+      }),
+    [workshops, specs, zone, top],
   );
-  const selected = WORKSHOPS.find((w) => w.id === shopParam) ?? null;
+
+  const selected = workshops.find((w) => String(w.id) === String(shopParam)) ?? WORKSHOPS.find((w) => String(w.id) === String(shopParam)) ?? null;
   const toggle = (s: Specialty) => setSpecs((p) => (p.includes(s) ? p.filter((x) => x !== s) : [...p, s]));
 
   return (
@@ -72,7 +259,9 @@ function DirectorioContent() {
         </div>
       </div>
 
-      <p className="mb-4 text-sm text-muted-foreground">{list.length} talleres encontrados</p>
+      <p className="mb-4 text-sm text-muted-foreground">
+        {loading ? "Cargando talleres..." : `${list.length} talleres encontrados`}
+      </p>
       {list.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border py-20 text-center">
           <p className="font-medium">Ningún taller cumple todos los filtros</p>

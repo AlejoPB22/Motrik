@@ -18,17 +18,104 @@ import {
   ShieldCheck,
   Wrench,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { PARTS, WORKSHOPS, cop, type Vehicle } from "@/data/mock";
+import { PARTS, WORKSHOPS, cop, type Brand, type MaintenanceRecord, type Vehicle } from "@/data/mock";
 import { useApp } from "@/lib/store";
 import { Img, PageHeader } from "@/components/motrick/shared";
 import { cn } from "@/lib/utils";
+import { createClient } from "@/utils/supabase/client";
 
 const km = (n: number) => `${n.toLocaleString("es-CO")} km`;
+
+interface DbVehiculo {
+  id: number | string;
+  marca?: string | null;
+  modelo?: string | null;
+  ano?: number | string | null;
+  usuario_id?: string | null;
+  placa?: string | null;
+  kilometraje?: number | string | null;
+  motor?: string | null;
+  combustible?: string | null;
+  transmision?: string | null;
+  color?: string | null;
+  imagen_url?: string | null;
+  soat_vencimiento?: string | null;
+  tecno_vencimiento?: string | null;
+}
+
+interface DbRegistroBitacora {
+  id?: number | string;
+  fecha?: string | null;
+  descripcion_cambio?: string | null;
+  pieza_actualizada?: string | null;
+  vehiculo_id?: number | string | null;
+  repuesto_id?: number | string | null;
+  titulo?: string | null;
+  descripcion?: string | null;
+  kilometraje?: number | string | null;
+  taller?: string | null;
+  costo?: number | string | null;
+}
+
+// Helper para interpretar registros de la tabla 'registros_bitacora'
+function parseDbRecord(r: DbRegistroBitacora, currentVehicles: Vehicle[]): MaintenanceRecord {
+  const rawDesc = String(r.descripcion_cambio || "");
+  let title = r.titulo || "";
+  let description = r.descripcion || "";
+  let workshop = r.taller || "Torque Automotriz";
+  let odometerKm = Number(r.kilometraje) || 45000;
+  let cost = Number(r.costo) || 0;
+
+  // Extraer metadata si está incrustada en formato [Taller: ... | Km: ... | Costo: $...]
+  const bracketMatch = rawDesc.match(/\[(.*?)\]/);
+  let cleanText = rawDesc;
+  if (bracketMatch) {
+    cleanText = rawDesc.replace(bracketMatch[0], "").trim();
+    const meta = bracketMatch[1];
+    const tallerM = meta.match(/Taller:\s*([^|]+)/);
+    if (tallerM) workshop = tallerM[1].trim();
+    const kmM = meta.match(/Km:\s*(\d+)/);
+    if (kmM) odometerKm = Number(kmM[1]);
+    const costM = meta.match(/Costo:\s*\$?(\d+)/);
+    if (costM) cost = Number(costM[1]);
+  }
+
+  if (!title) {
+    if (cleanText.includes("—")) {
+      const parts = cleanText.split("—");
+      title = parts[0].trim();
+      description = parts.slice(1).join("—").trim();
+    } else if (cleanText.includes(":")) {
+      const parts = cleanText.split(":");
+      title = parts[0].trim();
+      description = parts.slice(1).join(":").trim();
+    } else {
+      title = cleanText || "Mantenimiento General";
+      description = "Mantenimiento preventivo completado.";
+    }
+  }
+
+  const vId = String(r.vehiculo_id);
+  const matchedV = currentVehicles.find((v) => v.id === vId || String(v.id) === String(r.vehiculo_id));
+  const finalVehicleId = matchedV ? matchedV.id : (currentVehicles[0]?.id || "v1");
+
+  return {
+    id: String(r.id),
+    vehicleId: finalVehicleId,
+    date: r.fecha ? String(r.fecha).slice(0, 10) : new Date().toISOString().slice(0, 10),
+    km: odometerKm,
+    title,
+    description: description || "Inspección técnica y ajustes del fabricante.",
+    workshop,
+    cost,
+    part: r.pieza_actualizada || undefined,
+  };
+}
 
 // Helper para calcular días restantes y estado de vencimiento
 function getExpiryStatus(dateStr?: string) {
@@ -72,12 +159,92 @@ function getExpiryStatus(dateStr?: string) {
 }
 
 export default function BitacoraPage() {
-  const { vehicles, active, setActiveId, records } = useApp();
+  const { vehicles: storeVehicles, active: storeActive, setActiveId: setStoreActiveId, records: storeRecords, addRecord: storeAddRecord, updateVehicle } = useApp();
+  const [vehicles, setVehicles] = useState<Vehicle[]>(storeVehicles);
+  const [activeId, setActiveId] = useState<string>(storeActive.id);
+  const [records, setRecords] = useState<MaintenanceRecord[]>(storeRecords);
   const [openMaintenance, setOpenMaintenance] = useState(false);
   const [openDocs, setOpenDocs] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const list = records.filter((r) => r.vehicleId === active.id).sort((a, b) => b.date.localeCompare(a.date));
+  // Consulta SELECT a las tablas 'vehiculos' y 'registros_bitacora' en Supabase
+  useEffect(() => {
+    let activeEffect = true;
+    async function loadBitacoraData() {
+      setLoading(true);
+      try {
+        const supabase = createClient();
+
+        // 1. Consulta SELECT a la tabla 'vehiculos'
+        const { data: vData, error: vErr } = await supabase.from("vehiculos").select("*");
+        let activeVehicles = storeVehicles;
+
+        if (!vErr && vData && vData.length > 0) {
+          activeVehicles = vData.map((v: DbVehiculo) => ({
+            id: String(v.id),
+            brand: (v.marca || "Toyota") as Brand,
+            model: v.modelo || "Vehículo",
+            year: Number(v.ano) || 2022,
+            plate: v.placa || `COL-${String(v.id).padStart(3, "0")}`,
+            odometer: Number(v.kilometraje) || 48230,
+            engine: v.motor || "2.0L Skyactiv-G",
+            fuel: v.combustible || "Gasolina",
+            transmission: v.transmision || "Automática 6V",
+            color: v.color || "Gris Machine",
+            image: v.imagen_url || (String(v.marca).toLowerCase().includes("toyota") ? "/assets/car2.jpg" : "/assets/car1.jpg"),
+            soatExpiry: v.soat_vencimiento || "2026-11-15",
+            tecnoExpiry: v.tecno_vencimiento || "2027-03-20",
+            hasTecno: true,
+          }));
+          if (activeEffect) {
+            setVehicles(activeVehicles);
+            setActiveId(activeVehicles[0].id);
+          }
+        }
+
+        // 2. Consulta SELECT a la tabla 'registros_bitacora'
+        const { data: rData, error: rErr } = await supabase
+          .from("registros_bitacora")
+          .select("*")
+          .order("fecha", { ascending: false });
+
+        if (!activeEffect) return;
+
+        if (!rErr && rData && rData.length > 0) {
+          const mappedRecords = rData.map((r: DbRegistroBitacora) => parseDbRecord(r, activeVehicles));
+          setRecords(mappedRecords);
+        }
+      } catch (err) {
+        console.error("Error al cargar vehículos o bitácora de Supabase:", err);
+      } finally {
+        if (activeEffect) setLoading(false);
+      }
+    }
+
+    loadBitacoraData();
+    return () => {
+      activeEffect = false;
+    };
+  }, [storeVehicles]);
+
+  const active = vehicles.find((v) => v.id === activeId) ?? vehicles[0] ?? storeActive;
+
+  const handleSelectVehicle = (id: string) => {
+    setActiveId(id);
+    setStoreActiveId(id);
+  };
+
+  const handleRecordAdded = (newRecord: MaintenanceRecord) => {
+    setRecords((prev) => [newRecord, ...prev]);
+    storeAddRecord(newRecord);
+    if (newRecord.km > active.odometer) {
+      setVehicles((prev) => prev.map((v) => (v.id === active.id ? { ...v, odometer: newRecord.km } : v)));
+      updateVehicle(active.id, { odometer: newRecord.km });
+    }
+  };
+
+  const list = records.filter((r) => String(r.vehicleId) === String(active.id)).sort((a, b) => b.date.localeCompare(a.date));
   const spent = list.reduce((s, r) => s + r.cost, 0);
 
   const soatStatus = getExpiryStatus(active.soatExpiry);
@@ -104,7 +271,7 @@ export default function BitacoraPage() {
         {vehicles.map((v) => (
           <button
             key={v.id}
-            onClick={() => setActiveId(v.id)}
+            onClick={() => handleSelectVehicle(v.id)}
             className={cn(
               "flex shrink-0 items-center gap-3 rounded-2xl border p-2 pr-5 text-left transition-all",
               v.id === active.id ? "border-foreground bg-card shadow-soft" : "border-border opacity-70 hover:opacity-100"
@@ -237,7 +404,9 @@ export default function BitacoraPage() {
         </div>
 
         <section>
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Historial de Mantenimientos</h3>
+          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            Historial de Mantenimientos {loading && "(cargando de Supabase...)"}
+          </h3>
           {list.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
               Aún no hay registros para este vehículo.
@@ -300,7 +469,12 @@ export default function BitacoraPage() {
         </section>
       </div>
 
-      <MaintenanceDialog open={openMaintenance} onOpenChange={setOpenMaintenance} />
+      <MaintenanceDialog
+        open={openMaintenance}
+        onOpenChange={setOpenMaintenance}
+        activeVehicle={active}
+        onAddRecord={handleRecordAdded}
+      />
       <DocumentModal vehicle={active} open={openDocs} onOpenChange={setOpenDocs} />
     </div>
   );
@@ -394,40 +568,101 @@ function DocumentModal({ vehicle, open, onOpenChange }: { vehicle: Vehicle; open
   );
 }
 
-function MaintenanceDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
-  const { active, addRecord } = useApp();
+function MaintenanceDialog({
+  open,
+  onOpenChange,
+  activeVehicle,
+  onAddRecord,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  activeVehicle: Vehicle;
+  onAddRecord: (r: MaintenanceRecord) => void;
+}) {
   const today = new Date().toISOString().slice(0, 10);
   const [f, setF] = useState({ date: today, km: "", title: "", description: "", workshop: WORKSHOPS[0]!.name, cost: "" });
   const [hasPart, setHasPart] = useState(false);
   const [partQ, setPartQ] = useState("");
   const [part, setPart] = useState("");
   const [err, setErr] = useState("");
+  const [saving, setSaving] = useState(false);
   const matches = useMemo(() => (partQ.trim() ? PARTS.filter((p) => `${p.name} ${p.brand}`.toLowerCase().includes(partQ.toLowerCase())).slice(0, 4) : []), [partQ]);
   const inputCls = "h-11 w-full rounded-lg border border-input bg-card px-3.5 text-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10";
 
-  const submit = () => {
+  const submit = async () => {
     const kmN = Number(f.km);
     if (!f.title.trim()) return setErr("Describe el servicio realizado.");
     if (!kmN) return setErr("Ingresa el kilometraje.");
-    addRecord({ vehicleId: active.id, date: f.date, km: kmN, title: f.title.trim(), description: f.description.trim() || "Sin notas adicionales.", workshop: f.workshop, cost: Number(f.cost) || 0, part: hasPart ? (part || partQ.trim() || undefined) : undefined });
-    toast.success("Mantenimiento registrado", { description: `${f.title} · ${km(kmN)}` });
-    onOpenChange(false);
-    setF({ date: today, km: "", title: "", description: "", workshop: WORKSHOPS[0]!.name, cost: "" });
-    setHasPart(false);
-    setPartQ("");
-    setPart("");
+    setSaving(true);
     setErr("");
+
+    const numVehiculoId = Number(activeVehicle.id) || 1;
+    const costN = Number(f.cost) || 0;
+    const partName = hasPart ? (part || partQ.trim() || undefined) : undefined;
+
+    try {
+      const supabase = createClient();
+      // Inserción real en la tabla 'registros_bitacora' de Supabase
+      const insertPayload = {
+        vehiculo_id: numVehiculoId,
+        fecha: new Date(f.date).toISOString(),
+        descripcion_cambio: `${f.title} — ${f.description.trim() || "Mantenimiento preventivo"} [Taller: ${f.workshop} | Km: ${kmN} | Costo: $${costN}]`,
+        pieza_actualizada: partName || null,
+      };
+
+      const { data, error } = await supabase
+        .from("registros_bitacora")
+        .insert(insertPayload)
+        .select();
+
+      if (error) {
+        console.warn("Aviso al insertar en 'registros_bitacora' en Supabase:", error.message);
+        toast.info("Mantenimiento guardado localmente (ejecuta el seed en Supabase para persistir en la nube)", {
+          description: `${f.title} · ${km(kmN)}`,
+        });
+      } else {
+        toast.success("Mantenimiento persistido en Supabase", {
+          description: `${f.title} · ${km(kmN)}`,
+        });
+      }
+
+      const createdId = data && data[0]?.id ? String(data[0].id) : `m${Date.now()}`;
+      const newRecord: MaintenanceRecord = {
+        id: createdId,
+        vehicleId: activeVehicle.id,
+        date: f.date,
+        km: kmN,
+        title: f.title.trim(),
+        description: f.description.trim() || "Sin notas adicionales.",
+        workshop: f.workshop,
+        cost: costN,
+        part: partName,
+      };
+
+      onAddRecord(newRecord);
+      onOpenChange(false);
+      setF({ date: today, km: "", title: "", description: "", workshop: WORKSHOPS[0]!.name, cost: "" });
+      setHasPart(false);
+      setPartQ("");
+      setPart("");
+    } catch (err: unknown) {
+      console.error("Error al registrar mantenimiento:", err);
+      const msg = err instanceof Error ? err.message : "Error al conectar con la base de datos";
+      setErr(msg);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] max-w-lg overflow-y-auto">
         <DialogTitle className="text-xl">Registrar mantenimiento</DialogTitle>
-        <p className="-mt-2 text-sm text-muted-foreground">{active.brand} {active.model} {active.year} · {km(active.odometer)}</p>
+        <p className="-mt-2 text-sm text-muted-foreground">{activeVehicle.brand} {activeVehicle.model} {activeVehicle.year} · {km(activeVehicle.odometer)}</p>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <label className="block"><span className="mb-1.5 block text-xs font-medium text-muted-foreground">Fecha</span><input type="date" className={inputCls} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></label>
-            <label className="block"><span className="mb-1.5 block text-xs font-medium text-muted-foreground">Kilometraje</span><input inputMode="numeric" className={cn(inputCls, "font-mono")} placeholder={String(active.odometer)} value={f.km} onChange={(e) => setF({ ...f, km: e.target.value.replace(/\D/g, "") })} /></label>
+            <label className="block"><span className="mb-1.5 block text-xs font-medium text-muted-foreground">Kilometraje</span><input inputMode="numeric" className={cn(inputCls, "font-mono")} placeholder={String(activeVehicle.odometer)} value={f.km} onChange={(e) => setF({ ...f, km: e.target.value.replace(/\D/g, "") })} /></label>
           </div>
           <label className="block"><span className="mb-1.5 block text-xs font-medium text-muted-foreground">Servicio</span><input className={inputCls} placeholder="Ej. Cambio de aceite sintético" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></label>
           <label className="block"><span className="mb-1.5 block text-xs font-medium text-muted-foreground">Descripción</span><textarea rows={3} className={cn(inputCls, "h-auto py-2.5")} placeholder="Detalles del trabajo realizado" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></label>
@@ -466,7 +701,9 @@ function MaintenanceDialog({ open, onOpenChange }: { open: boolean; onOpenChange
           {err && <p className="text-sm text-destructive">{err}</p>}
           <div className="flex gap-2">
             <Button variant="outline" size="lg" className="h-11" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button variant="cta" size="lg" className="h-11 flex-1" onClick={submit}>Guardar registro</Button>
+            <Button variant="cta" size="lg" className="h-11 flex-1" onClick={submit} disabled={saving}>
+              {saving ? "Guardando en Supabase..." : "Guardar registro"}
+            </Button>
           </div>
         </div>
       </DialogContent>
