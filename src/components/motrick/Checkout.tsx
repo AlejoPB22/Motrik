@@ -2,6 +2,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { CheckCircle2, CreditCard, Loader2, Lock, ShieldCheck, Truck } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { cop, type Part } from "@/data/mock";
@@ -39,11 +40,22 @@ export function Checkout({ part, qty, open, onOpenChange }: { part: Part | null;
     number: digits.length !== 16 ? "Ingresa 16 dígitos" : "",
     name: card.name.trim().length < 3 ? "Nombre como aparece en la tarjeta" : "",
     exp: !/^(0[1-9]|1[0-2])\/\d{2}$/.test(card.exp) ? "Formato MM/AA" : "",
-    cvv: !/^\d{3,4}$/.test(card.cvv) ? "3 o 4 dígitos" : "",
+    cvv: !/^\d{3}$/.test(card.cvv) ? "3 dígitos" : "",
   };
   const valid = Object.values(errors).every((e) => !e);
   const fmtNum = (v: string) => v.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
   const fmtExp = (v: string) => { const d = v.replace(/\D/g, "").slice(0, 4); return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d; };
+
+  const handleProceedToPayment = () => {
+    setTouched(true);
+    const rawCard = card.number.replace(/\s/g, "");
+    if (rawCard.length !== 16 || card.cvv.trim().length !== 3) {
+      toast.error("Ingrese una tarjeta válida de 16 dígitos y un CVV de 3 dígitos.");
+      return;
+    }
+    if (!valid) return;
+    setStep(2);
+  };
 
   const inputCls = "h-11 w-full rounded-lg border border-input bg-card px-3.5 text-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10";
 
@@ -104,7 +116,7 @@ export function Checkout({ part, qty, open, onOpenChange }: { part: Part | null;
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="lg" className="h-12" onClick={() => setStep(0)}>Atrás</Button>
-                  <Button variant="cta" size="lg" className="h-12 flex-1" onClick={() => { setTouched(true); if (valid) setStep(2); }}><Lock className="h-4 w-4" /> Pagar {cop(total)}</Button>
+                  <Button variant="cta" size="lg" className="h-12 flex-1" onClick={handleProceedToPayment}><Lock className="h-4 w-4" /> Pagar {cop(total)}</Button>
                 </div>
                 <p className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5" /> Pago simulado · ningún cobro real</p>
               </div>

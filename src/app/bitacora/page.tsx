@@ -63,7 +63,7 @@ interface DbRegistroBitacora {
   costo?: number | string | null;
 }
 
-// Helper para interpretar registros de la tabla 'registros_bitacora'
+// Transformación de datos de persistencia al modelo de vista
 function parseDbRecord(r: DbRegistroBitacora, currentVehicles: Vehicle[]): MaintenanceRecord {
   const rawDesc = String(r.descripcion_cambio || "");
   let title = r.titulo || "";
@@ -72,7 +72,7 @@ function parseDbRecord(r: DbRegistroBitacora, currentVehicles: Vehicle[]): Maint
   let odometerKm = Number(r.kilometraje) || 45000;
   let cost = Number(r.costo) || 0;
 
-  // Extraer metadata si está incrustada en formato [Taller: ... | Km: ... | Costo: $...]
+  // Extracción de metadatos de servicio
   const bracketMatch = rawDesc.match(/\[(.*?)\]/);
   let cleanText = rawDesc;
   if (bracketMatch) {
@@ -118,7 +118,7 @@ function parseDbRecord(r: DbRegistroBitacora, currentVehicles: Vehicle[]): Maint
   };
 }
 
-// Helper para calcular días restantes y estado de vencimiento
+// Control de fechas límite y alertas de documentos reglamentarios
 function getExpiryStatus(dateStr?: string) {
   if (!dateStr) return { status: "missing", days: null, text: "Sin registrar", color: "text-muted-foreground", bg: "bg-muted" };
   const target = new Date(dateStr + "T00:00:00");
@@ -169,15 +169,13 @@ export default function BitacoraPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Consulta SELECT a las tablas 'vehiculos' y 'registros_bitacora' en Supabase
+  // Sincronización de vehículos y bitácora desde la base de datos
   useEffect(() => {
     let activeEffect = true;
     async function loadBitacoraData() {
       setLoading(true);
       try {
         const supabase = createClient();
-
-        // 1. Consulta SELECT a la tabla 'vehiculos'
         const { data: vData, error: vErr } = await supabase.from("vehiculos").select("*");
         let activeVehicles = storeVehicles;
 
@@ -204,7 +202,6 @@ export default function BitacoraPage() {
           }
         }
 
-        // 2. Consulta SELECT a la tabla 'registros_bitacora'
         const { data: rData, error: rErr } = await supabase
           .from("registros_bitacora")
           .select("*")
@@ -217,7 +214,7 @@ export default function BitacoraPage() {
           setRecords(mappedRecords);
         }
       } catch (err) {
-        console.error("Error al cargar vehículos o bitácora de Supabase:", err);
+        console.error("Error al sincronizar bitácora:", err);
       } finally {
         if (activeEffect) setLoading(false);
       }
@@ -289,7 +286,6 @@ export default function BitacoraPage() {
 
       <div className="grid gap-6 lg:grid-cols-[380px_1fr]">
         <div className="space-y-6 lg:sticky lg:top-24 h-fit">
-          {/* Card del Vehículo */}
           <motion.aside
             key={active.id}
             initial={{ opacity: 0, y: 8 }}
@@ -336,7 +332,6 @@ export default function BitacoraPage() {
             </div>
           </motion.aside>
 
-          {/* Card de Documentación Legal & Vencimientos */}
           <div className="rounded-2xl border border-border bg-card p-5 shadow-soft">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
@@ -352,7 +347,6 @@ export default function BitacoraPage() {
             </div>
 
             <div className="mt-4 space-y-3">
-              {/* SOAT */}
               <div className={cn("p-3.5 rounded-xl border transition-all", soatStatus.bg)}>
                 <div className="flex items-start justify-between">
                   <div>
@@ -369,7 +363,6 @@ export default function BitacoraPage() {
                 </div>
               </div>
 
-              {/* Tecnomecánica */}
               {active.hasTecno !== false ? (
                 <div className={cn("p-3.5 rounded-xl border transition-all", tecnoStatus.bg)}>
                   <div className="flex items-start justify-between">
@@ -403,13 +396,12 @@ export default function BitacoraPage() {
             )}
           </div>
 
-          {/* Anuncio nativo y contextual automotriz (RNF-04) */}
           <SponsoredCard {...SPONSORED_ADS.cdaRevision} />
         </div>
 
         <section>
           <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Historial de Mantenimientos {loading && "(cargando de Supabase...)"}
+            Historial de Mantenimientos {loading && "(cargando...)"}
           </h3>
           {list.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
@@ -516,7 +508,6 @@ function DocumentModal({ vehicle, open, onOpenChange }: { vehicle: Vehicle; open
         </p>
 
         <div className="space-y-4 pt-2">
-          {/* Campo SOAT */}
           <div className="rounded-xl border border-border p-4 bg-muted/20">
             <label className="block">
               <div className="flex items-center justify-between mb-1.5">
@@ -535,7 +526,6 @@ function DocumentModal({ vehicle, open, onOpenChange }: { vehicle: Vehicle; open
             </label>
           </div>
 
-          {/* Campo Tecnomecánica */}
           <div className="rounded-xl border border-border p-4 bg-muted/20">
             <div className="flex items-center justify-between mb-3">
               <div>
@@ -597,6 +587,10 @@ function MaintenanceDialog({
     const kmN = Number(f.km);
     if (!f.title.trim()) return setErr("Describe el servicio realizado.");
     if (!kmN) return setErr("Ingresa el kilometraje.");
+    if (kmN < activeVehicle.odometer) {
+      toast.error(`El kilometraje ingresado (${kmN} km) no puede ser inferior al actual (${activeVehicle.odometer} km).`);
+      return;
+    }
     setSaving(true);
     setErr("");
 
@@ -606,7 +600,7 @@ function MaintenanceDialog({
 
     try {
       const supabase = createClient();
-      // Inserción real en la tabla 'registros_bitacora' de Supabase
+      // Persistencia del mantenimiento en la base de datos
       const insertPayload = {
         vehiculo_id: numVehiculoId,
         fecha: new Date(f.date).toISOString(),
@@ -620,12 +614,11 @@ function MaintenanceDialog({
         .select();
 
       if (error) {
-        console.warn("Aviso al insertar en 'registros_bitacora' en Supabase:", error.message);
-        toast.info("Mantenimiento guardado localmente (ejecuta el seed en Supabase para persistir en la nube)", {
+        toast.info("Mantenimiento guardado en memoria local", {
           description: `${f.title} · ${km(kmN)}`,
         });
       } else {
-        toast.success("Mantenimiento persistido en Supabase", {
+        toast.success("Mantenimiento registrado con éxito", {
           description: `${f.title} · ${km(kmN)}`,
         });
       }

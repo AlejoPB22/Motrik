@@ -5,7 +5,6 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
 export const createClient = async (request: NextRequest) => {
-  // Create an unmodified response
   let supabaseResponse = NextResponse.next({
     request: {
       headers: request.headers,
@@ -33,7 +32,7 @@ export const createClient = async (request: NextRequest) => {
     }
   );
 
-  // Refreshes the auth token if needed
+  // Refresco de sesión activa
   await supabase.auth.getUser();
 
   return supabaseResponse;

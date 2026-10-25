@@ -138,7 +138,7 @@ function RepuestosContent() {
     setYear(String(active.year));
   }, [active]);
 
-  // Consulta SELECT a la tabla 'repuestos' en Supabase con filtros dinámicos
+  // Carga de catálogo con filtros de categoría y compatibilidad
   useEffect(() => {
     let activeEffect = true;
     async function loadRepuestos() {
@@ -147,12 +147,11 @@ function RepuestosContent() {
         const supabase = createClient();
         let query = supabase.from("repuestos").select("*");
 
-        // Filtro por categoría en Supabase
         if (cat) {
           query = query.ilike("categoria_vehiculo", `%${cat}%`);
         }
 
-        // Filtro por compatibilidad en Supabase cuando se activa 'Solo compatibles'
+        // Búsqueda por modelo vehicular o piezas de compatibilidad universal
         if (onlyFit && model) {
           query = query.or(`compatibilidad.ilike.%${model}%,compatibilidad.ilike.%Universal%`);
         }
@@ -162,14 +161,11 @@ function RepuestosContent() {
         if (!activeEffect) return;
 
         if (error) {
-          console.warn("Aviso al consultar 'repuestos' en Supabase (usando datos de respaldo):", error.message);
-          // Si hay error en Supabase o tabla vacía, mantener datos mock para no dejar en blanco
           setParts(PARTS);
         } else if (data && data.length > 0) {
           const mapped = data.map(mapDbRepuestoToPart);
           setParts(mapped);
         } else {
-          // Si el filtro no produjo resultados en DB
           if (cat || (onlyFit && model)) {
             setParts([]);
           } else {
@@ -177,7 +173,7 @@ function RepuestosContent() {
           }
         }
       } catch (e) {
-        console.error("Error en la conexión con Supabase:", e);
+        console.error("Error al consultar repuestos:", e);
         if (activeEffect) setParts(PARTS);
       } finally {
         if (activeEffect) setLoading(false);
@@ -337,7 +333,7 @@ function RepuestosContent() {
         </motion.div>
       )}
 
-      {/* Espacios publicitarios nativos y contextuales no invasivos (RNF-04) */}
+      {/* Pauta publicitaria contextual (RNF-04) */}
       <div className="mt-10 pt-6 border-t border-border/60">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

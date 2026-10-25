@@ -62,7 +62,7 @@ function mapDbMecanicoToWorkshop(m: DbMecanico): Workshop {
   const zone = parts[0]?.trim() || "Bogotá";
   const address = parts.slice(1).join(",").trim() || ubicacionStr;
 
-  // Cálculo de calificación promedio a partir de los datos registrados en la tabla 'valoraciones'
+  // Promedio de calificaciones calculadas desde valoraciones
   const vals = Array.isArray(m.valoraciones) ? m.valoraciones : [];
   let avgRating = Number(m.calificacion_promedio) || 5.0;
   if (vals.length > 0) {
@@ -140,7 +140,7 @@ function DirectorioContent() {
   const [workshops, setWorkshops] = useState<Workshop[]>(WORKSHOPS);
   const [loading, setLoading] = useState(true);
 
-  // Consulta SELECT a las tablas 'mecanicos', 'usuarios' y 'valoraciones' en Supabase
+  // Carga de directorio de talleres con valoraciones y datos de contacto
   useEffect(() => {
     let activeEffect = true;
     async function loadDirectorio() {
@@ -169,7 +169,6 @@ function DirectorioContent() {
           )
         `);
 
-        // Filtro por especialidad técnica consultado en Supabase
         if (specs.length === 1) {
           query = query.ilike("especialidad", `%${specs[0]}%`);
         }
@@ -179,8 +178,7 @@ function DirectorioContent() {
         if (!activeEffect) return;
 
         if (error) {
-          console.warn("Aviso al consultar 'mecanicos' con joins en Supabase:", error.message);
-          // Consulta fallback sencilla si las políticas RLS o foreign keys requieren formato base
+          // Fallback a consulta simple si existen restricciones en relaciones
           const simple = await supabase.from("mecanicos").select("*, usuarios(nombre, correo)");
           if (!simple.error && simple.data && simple.data.length > 0) {
             setWorkshops(simple.data.map(mapDbMecanicoToWorkshop));
@@ -403,7 +401,7 @@ function DirectorioContent() {
         </DialogContent>
       </Dialog>
 
-      {/* Publicidad Nativa Contextual Automotriz (RNF-04) */}
+      {/* Pauta publicitaria contextual (RNF-04) */}
       <div className="mt-12 pt-6 border-t border-border/60">
         <div className="mb-3 flex items-center justify-between">
           <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">

@@ -300,26 +300,29 @@ SELECT
 FROM public.vehiculos v WHERE v.placa = 'KDM-482' LIMIT 1;
 
 -- ==============================================================================
--- 9. Ajuste de Políticas RLS para lectura pública de catálogo y demo fluido
+-- 9. Políticas RLS para catálogo, directorio y bitácora
 -- ==============================================================================
 
--- Catálogo de repuestos accesible para todos (anon y authenticated)
+-- Catálogo de repuestos accesible para lectura general
 DROP POLICY IF EXISTS repuestos_read_all ON public.repuestos;
 CREATE POLICY repuestos_read_all ON public.repuestos FOR SELECT TO anon, authenticated USING (true);
 
--- Directorio de mecánicos accesible para todos
+-- Directorio de mecánicos accesible para lectura general
 DROP POLICY IF EXISTS mecanicos_read_all ON public.mecanicos;
 CREATE POLICY mecanicos_read_all ON public.mecanicos FOR SELECT TO anon, authenticated USING (true);
 
--- Nombre de los mecánicos accesible en la tabla usuarios para el directorio
+-- Perfiles de mecánicos accesibles en la tabla usuarios
 DROP POLICY IF EXISTS usuarios_read_mecanicos ON public.usuarios;
 CREATE POLICY usuarios_read_mecanicos ON public.usuarios FOR SELECT TO anon, authenticated USING (rol = 'mecanico' OR id = auth.uid());
 
--- Valoraciones accesibles para lectura de estrellas
+-- Valoraciones accesibles para lectura e inserción
 DROP POLICY IF EXISTS valoraciones_read_all ON public.valoraciones;
 CREATE POLICY valoraciones_read_all ON public.valoraciones FOR SELECT TO anon, authenticated USING (true);
 
--- Vehículos y Bitácora accesibles en modo demo (permitiendo lectura y registro fluido)
+DROP POLICY IF EXISTS valoraciones_anon_insert ON public.valoraciones;
+CREATE POLICY valoraciones_anon_insert ON public.valoraciones FOR INSERT TO anon, authenticated WITH CHECK (true);
+
+-- Políticas RLS para vehículos y registros de bitácora
 DROP POLICY IF EXISTS vehiculos_anon_read ON public.vehiculos;
 CREATE POLICY vehiculos_anon_read ON public.vehiculos FOR SELECT TO anon, authenticated USING (true);
 
