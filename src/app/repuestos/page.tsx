@@ -14,6 +14,7 @@ import { Chip, Img, PageHeader, Stars } from "@/components/motrick/shared";
 import { Checkout } from "@/components/motrick/Checkout";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
+import { SponsoredCard, SPONSORED_ADS } from "@/components/motrick/SponsoredCard";
 
 function getPartFallbackImage(category: string): string {
   const c = (category || "").toLowerCase();
@@ -335,6 +336,20 @@ function RepuestosContent() {
           })}
         </motion.div>
       )}
+
+      {/* Espacios publicitarios nativos y contextuales no invasivos (RNF-04) */}
+      <div className="mt-10 pt-6 border-t border-border/60">
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Servicios y Herramientas Recomendadas
+          </p>
+          <span className="text-[10px] text-muted-foreground">Publicidad transparente · Ley 1480</span>
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <SponsoredCard {...SPONSORED_ADS.scannerOBD2} />
+          <SponsoredCard {...SPONSORED_ADS.soatSeguros} />
+        </div>
+      </div>
 
       <PartDetail
         part={selected}
