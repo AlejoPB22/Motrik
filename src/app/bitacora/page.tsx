@@ -26,7 +26,7 @@ import { PARTS, WORKSHOPS, cop, formatVehicleName, type MaintenanceRecord, type 
 import { useApp } from "@/lib/store";
 import { Img, PageHeader } from "@/components/motrick/shared";
 import { cn } from "@/lib/utils";
-import { getVehiculos, getRegistrosBitacora, saveRegistroBitacora, saveVehiculoDocs } from "@/services/bitacora.service";
+import { saveRegistroBitacora, saveVehiculoDocs } from "@/services/bitacora.service";
 import { SponsoredCard, SPONSORED_ADS } from "@/components/motrick/SponsoredCard";
 
 const km = (n: number) => `${n.toLocaleString("es-CO")} km`;
@@ -88,70 +88,46 @@ function getExpiryStatus(dateStr?: string) {
 }
 
 export default function BitacoraPage() {
-  const { vehicles: storeVehicles, active: storeActive, setActiveId: setStoreActiveId, records: storeRecords, addRecord: storeAddRecord, updateVehicle } = useApp();
-  const [vehicles, setVehicles] = useState<Vehicle[]>(storeVehicles);
-  const [activeId, setActiveId] = useState<string>(storeActive.id);
-  const [records, setRecords] = useState<MaintenanceRecord[]>(storeRecords);
+  const {
+    vehicles,
+    active,
+    setActiveId,
+    records,
+    addRecord,
+    updateVehicle,
+    refreshData,
+  } = useApp();
   const [openMaintenance, setOpenMaintenance] = useState(false);
   const [openDocs, setOpenDocs] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
 
-  // Sincronización de vehículos y bitácora mediante la capa de servicios
   useEffect(() => {
-    let activeEffect = true;
-    async function loadBitacoraData() {
-      setLoading(true);
-      try {
-        const vList = await getVehiculos();
-        if (activeEffect) {
-          setVehicles(vList);
-          setActiveId(vList[0]?.id || "v1");
-        }
-
-        const rList = await getRegistrosBitacora(vList);
-        if (activeEffect) {
-          setRecords(rList);
-        }
-      } catch (err) {
-        console.error("[BitacoraPage] Error al sincronizar bitácora:", err);
-      } finally {
-        if (activeEffect) setLoading(false);
-      }
-    }
-
-    loadBitacoraData();
-    return () => {
-      activeEffect = false;
-    };
-  }, []);
-
-  const active = vehicles.find((v) => v.id === activeId) ?? vehicles[0] ?? storeActive;
+    refreshData();
+  }, [refreshData]);
 
   const handleSelectVehicle = (id: string) => {
     setActiveId(id);
-    setStoreActiveId(id);
   };
 
   const handleRecordAdded = (newRecord: MaintenanceRecord) => {
-    setRecords((prev) => [newRecord, ...prev]);
-    storeAddRecord(newRecord);
-    if (newRecord.km > active.odometer) {
-      setVehicles((prev) => prev.map((v) => (v.id === active.id ? { ...v, odometer: newRecord.km } : v)));
-      updateVehicle(active.id, { odometer: newRecord.km });
-    }
+    addRecord(newRecord);
   };
 
   const handleUpdateVehicleDocs = async (id: string, data: Partial<Vehicle>) => {
-    // 1. Actualizar estado local reactivo inmediatamente
-    setVehicles((prev) => prev.map((v) => (v.id === id ? { ...v, ...data } : v)));
-    // 2. Actualizar store global
+    // 1. Actualizar estado reactivo global en el store
     updateVehicle(id, data);
-    // 3. Persistir en localStorage y Supabase mediante la capa de servicios
+    // 2. Persistir en localStorage y Supabase mediante la capa de servicios
     await saveVehiculoDocs(id, data);
   };
 
-  const list = records.filter((r) => String(r.vehicleId) === String(active.id)).sort((a, b) => b.date.localeCompare(a.date));
+  const activeNorm = active.id.replace(/^v/, "");
+  const list = records
+    .filter((r) => {
+      const rNorm = String(r.vehicleId).replace(/^v/, "");
+      return r.vehicleId === active.id || rNorm === activeNorm;
+    })
+    .sort((a, b) => b.date.localeCompare(a.date));
+
   const spent = list.reduce((s, r) => s + r.cost, 0);
 
   const soatStatus = getExpiryStatus(active.soatExpiry);
@@ -313,7 +289,7 @@ export default function BitacoraPage() {
 
         <section>
           <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-muted-foreground">
-            Historial de Mantenimientos {loading && "(sincronizando...)"}
+            Historial de Mantenimientos ({list.length})
           </h3>
           {list.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border py-16 text-center text-sm text-muted-foreground">

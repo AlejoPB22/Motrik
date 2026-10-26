@@ -45,7 +45,7 @@ export function formatVehicleName(brand?: string | null, model?: string | null):
 
 export const USER_VEHICLES: Vehicle[] = [
   {
-    id: "v1",
+    id: "1",
     brand: "Mazda",
     model: "Mazda 3",
     year: 2021,
@@ -61,7 +61,7 @@ export const USER_VEHICLES: Vehicle[] = [
     hasTecno: true,
   },
   {
-    id: "v2",
+    id: "2",
     brand: "Toyota",
     model: "Hilux",
     year: 2019,
@@ -148,12 +148,12 @@ export type MaintenanceRecord = {
 };
 
 export const RECORDS: MaintenanceRecord[] = [
-  { id: "m1", vehicleId: "v1", date: "2026-09-12", km: 47800, title: "Cambio de aceite sintético", description: "Cambio de aceite 5W-30 y filtro. Revisión de niveles y presión de llantas.", workshop: "Torque Automotriz", cost: 285000, part: "Aceite sintético 5W-30 (4L) · Mobil 1" },
-  { id: "m2", vehicleId: "v1", date: "2026-05-30", km: 41250, title: "Cambio de pastillas de freno", description: "Pastillas delanteras cerámicas; rectificado de discos.", workshop: "Frenos & Ejes del Caribe", cost: 420000, part: "Pastillas de freno cerámicas · Brembo" },
-  { id: "m3", vehicleId: "v1", date: "2026-01-14", km: 35600, title: "Alineación y balanceo", description: "Alineación computarizada 3D y balanceo de las cuatro ruedas.", workshop: "Torque Automotriz", cost: 140000 },
-  { id: "m4", vehicleId: "v1", date: "2025-08-03", km: 28900, title: "Mantenimiento de 30.000 km", description: "Bujías, filtro de aire, filtro de cabina y líquido de frenos.", workshop: "Centro Técnico El Bosque", cost: 690000, part: "Bujías iridio (juego x4) · NGK" },
-  { id: "m5", vehicleId: "v2", date: "2026-08-20", km: 111900, title: "Cambio de amortiguadores", description: "Amortiguadores delanteros y revisión de bujes.", workshop: "Suspensiones del Caribe", cost: 980000, part: "Amortiguador delantero a gas · Monroe" },
-  { id: "m6", vehicleId: "v2", date: "2026-03-11", km: 104300, title: "Cambio de aceite y filtros", description: "Aceite diésel 15W-40, filtro de combustible y de aire.", workshop: "Centro Técnico El Bosque", cost: 410000 },
+  { id: "m1", vehicleId: "1", date: "2026-09-12", km: 47800, title: "Cambio de aceite sintético", description: "Cambio de aceite 5W-30 y filtro. Revisión de niveles y presión de llantas.", workshop: "Torque Automotriz", cost: 285000, part: "Aceite sintético 5W-30 (4L) · Mobil 1" },
+  { id: "m2", vehicleId: "1", date: "2026-05-30", km: 41250, title: "Cambio de pastillas de freno", description: "Pastillas delanteras cerámicas; rectificado de discos.", workshop: "Frenos & Ejes del Caribe", cost: 420000, part: "Pastillas de freno cerámicas · Brembo" },
+  { id: "m3", vehicleId: "1", date: "2026-01-14", km: 35600, title: "Alineación y balanceo", description: "Alineación computarizada 3D y balanceo de las cuatro ruedas.", workshop: "Torque Automotriz", cost: 140000 },
+  { id: "m4", vehicleId: "1", date: "2025-08-03", km: 28900, title: "Mantenimiento de 30.000 km", description: "Bujías, filtro de aire, filtro de cabina y líquido de frenos.", workshop: "Centro Técnico El Bosque", cost: 690000, part: "Bujías iridio (juego x4) · NGK" },
+  { id: "m5", vehicleId: "2", date: "2026-08-20", km: 111900, title: "Cambio de amortiguadores", description: "Amortiguadores delanteros y revisión de bujes.", workshop: "Suspensiones del Caribe", cost: 980000, part: "Amortiguador delantero a gas · Monroe" },
+  { id: "m6", vehicleId: "2", date: "2026-03-11", km: 104300, title: "Cambio de aceite y filtros", description: "Aceite diésel 15W-40, filtro de combustible y de aire.", workshop: "Centro Técnico El Bosque", cost: 410000 },
 ];
 
 export const cop = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);

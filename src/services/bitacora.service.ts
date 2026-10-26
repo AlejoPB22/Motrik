@@ -6,12 +6,12 @@ export const VEHICULOS_SELECT_COLUMNS =
   "id, usuario_id, marca, modelo, ano, placa, kilometraje, motor, combustible, transmision, color, imagen_url, soat_vencimiento, tecno_vencimiento" as const;
 
 export const REGISTROS_BITACORA_SELECT_COLUMNS =
-  "id, vehiculo_id, fecha, descripcion_cambio, pieza_actualizada, repuesto_id, titulo, descripcion, kilometraje, taller, costo" as const;
+  "id, vehiculo_id, fecha, descripcion_cambio, pieza_actualizada, repuesto_id, titulo, kilometraje, taller, costo" as const;
 
 export function parseDbRecord(r: DbRegistroBitacora, currentVehicles: Vehicle[]): MaintenanceRecord {
   const rawDesc = String(r.descripcion_cambio || "");
   let title = r.titulo || "";
-  let description = r.descripcion || "";
+  let description = "";
   let workshop = r.taller || "Torque Automotriz";
   let odometerKm = Number(r.kilometraje) || 45000;
   let cost = Number(r.costo) || 0;
@@ -26,28 +26,29 @@ export function parseDbRecord(r: DbRegistroBitacora, currentVehicles: Vehicle[])
     if (tallerM && tallerM[1]) workshop = tallerM[1].trim();
     const kmM = meta?.match(/Km:\s*(\d+)/);
     if (kmM && kmM[1]) odometerKm = Number(kmM[1]);
-    const costM = meta?.match(/Costo:\s*\$?(\d+)/);
+    const costM = meta?.match(/Costo:\s*\$?\s*(\d+)/);
     if (costM && costM[1]) cost = Number(costM[1]);
   }
 
-  if (!title) {
-    if (cleanText.includes("—")) {
-      const parts = cleanText.split("—");
-      title = parts[0]?.trim() || "Mantenimiento General";
-      description = parts.slice(1).join("—").trim();
-    } else if (cleanText.includes(":")) {
-      const parts = cleanText.split(":");
-      title = parts[0]?.trim() || "Mantenimiento General";
-      description = parts.slice(1).join(":").trim();
-    } else {
-      title = cleanText || "Mantenimiento General";
-      description = "Mantenimiento preventivo completado.";
-    }
+  if (cleanText.includes("—")) {
+    const parts = cleanText.split("—");
+    if (!title) title = parts[0]?.trim() || "Mantenimiento General";
+    description = parts.slice(1).join("—").trim();
+  } else if (cleanText.includes(":")) {
+    const parts = cleanText.split(":");
+    if (!title) title = parts[0]?.trim() || "Mantenimiento General";
+    description = parts.slice(1).join(":").trim();
+  } else {
+    if (!title) title = cleanText || "Mantenimiento General";
+    description = cleanText || "Mantenimiento preventivo completado.";
   }
 
-  const vId = String(r.vehiculo_id);
-  const matchedV = currentVehicles.find((v) => v.id === vId || String(v.id) === String(r.vehiculo_id));
-  const finalVehicleId = matchedV ? matchedV.id : currentVehicles[0]?.id || "v1";
+  const vId = String(r.vehiculo_id || "").replace(/^v/, "");
+  const matchedV = currentVehicles.find((v) => {
+    const normId = String(v.id).replace(/^v/, "");
+    return normId === vId || v.id === String(r.vehiculo_id);
+  });
+  const finalVehicleId = matchedV ? matchedV.id : currentVehicles[0]?.id || "1";
 
   return {
     id: String(r.id),
@@ -174,15 +175,18 @@ export async function getRegistrosBitacora(currentVehicles: Vehicle[]): Promise<
     }
 
     if (data && data.length > 0) {
-      // Deduplicar registros de bitácora
+      // Mapear primero para tener metadatos normalizados
+      const mappedRecords = (data as DbRegistroBitacora[]).map((r) => parseDbRecord(r, currentVehicles));
+
+      // Deduplicar registros de bitácora por vehículo + título normalizado + kilometraje
       const seenRecords = new Set<string>();
-      const uniqueRecords = (data as DbRegistroBitacora[]).filter((r) => {
-        const key = `${r.vehiculo_id}-${r.titulo}-${r.fecha}-${r.kilometraje}`;
+      const uniqueRecords = mappedRecords.filter((r) => {
+        const key = `${r.vehicleId}-${r.title.toLowerCase().trim()}-${r.km}`;
         if (seenRecords.has(key)) return false;
         seenRecords.add(key);
         return true;
       });
-      return uniqueRecords.map((r) => parseDbRecord(r, currentVehicles));
+      return uniqueRecords;
     }
 
     return RECORDS;
@@ -254,7 +258,6 @@ export async function saveRegistroBitacora(
         descripcion_cambio: `${record.title} — ${record.description} [Taller: ${record.workshop} | Km: ${record.km} | Costo: $${record.cost}]`,
         pieza_actualizada: record.part || null,
         titulo: record.title,
-        descripcion: record.description,
         kilometraje: record.km,
         taller: record.workshop,
         costo: record.cost,
