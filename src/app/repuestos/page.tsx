@@ -2,7 +2,7 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { BadgeCheck, Minus, Plus, ShieldCheck, SlidersHorizontal, Truck, X } from "lucide-react";
+import { BadgeCheck, Minus, Plus, ShieldAlert, ShieldCheck, SlidersHorizontal, Truck, X } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -183,31 +183,50 @@ function RepuestosContent() {
                 transition={{ delay: i * 0.03 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => router.push(`/repuestos?part=${p.id}`)}
-                className="group overflow-hidden rounded-2xl border border-border bg-card text-left shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-lift"
+                className="group overflow-hidden rounded-2xl border border-border bg-card text-left shadow-soft transition-all hover:-translate-y-1 hover:shadow-lift"
               >
                 <div className="relative">
-                  <Img src={p.images[0] ?? ""} alt={p.name} className="aspect-square transition-transform duration-500 group-hover:scale-[1.03]" />
-                  {fit && (
-                    <span className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full bg-success px-2 py-1 text-[10px] font-semibold text-success-foreground shadow-sm">
-                      <BadgeCheck className="h-3 w-3" /> Compatible con tu auto
-                    </span>
-                  )}
+                  <Img src={p.images[0] ?? ""} alt={p.name} className="aspect-square transition-transform duration-500 group-hover:scale-[1.04]" />
+                  {/* Badge flotante animado con Framer Motion */}
+                  <motion.div
+                    initial={{ scale: 0.85, opacity: 0, y: -4 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                    className={cn(
+                      "absolute left-2.5 top-2.5 z-10 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold shadow-md backdrop-blur-md transition-all",
+                      fit
+                        ? "bg-emerald-600/95 text-white border border-emerald-400/40 shadow-emerald-950/20"
+                        : "bg-zinc-900/85 text-zinc-300 border border-zinc-700/50"
+                    )}
+                  >
+                    {fit ? (
+                      <>
+                        <BadgeCheck className="h-3.5 w-3.5 text-emerald-200" />
+                        <span>100% Compatible</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldAlert className="h-3.5 w-3.5 text-zinc-400" />
+                        <span>No verificado</span>
+                      </>
+                    )}
+                  </motion.div>
                 </div>
                 <div className="p-3.5 md:p-4">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{p.brand}</p>
-                  <p className="mt-0.5 line-clamp-2 min-h-[2.5rem] text-sm font-medium leading-snug">{p.name}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{p.brand}</p>
+                  <p className="mt-0.5 line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-snug group-hover:text-primary transition-colors">{p.name}</p>
                   <div className="mt-1.5 flex items-center gap-1.5">
                     <Stars value={p.rating} size={12} />
                     <span className="text-xs text-muted-foreground">({p.reviews})</span>
                   </div>
                   {p.oldPrice && <p className="mt-2 text-xs text-muted-foreground line-through">{cop(p.oldPrice)}</p>}
                   <div className={cn("flex items-baseline gap-2", !p.oldPrice && "mt-2")}>
-                    <span className="font-semibold text-lg">{cop(p.price)}</span>
+                    <span className="font-bold text-lg">{cop(p.price)}</span>
                     {p.oldPrice && <span className="text-xs font-semibold text-success">{Math.round((1 - p.price / p.oldPrice) * 100)}% OFF</span>}
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-xs">
-                    {p.freeShipping && <span className="font-medium text-success">Envío gratis</span>}
-                    <span className={p.stock < 8 ? "text-cta" : "text-muted-foreground"}>
+                    {p.freeShipping && <span className="font-semibold text-emerald-600 dark:text-emerald-400">Envío gratis</span>}
+                    <span className={p.stock < 8 ? "font-semibold text-cta" : "text-muted-foreground"}>
                       {p.stock < 8 ? `¡Últimas ${p.stock}!` : "En stock"}
                     </span>
                   </div>
@@ -292,29 +311,53 @@ function PartDetail({ part, onClose, onBuy }: { part: Part | null; onClose: () =
             </div>
             <div className="space-y-6 p-6">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{p.brand} · {p.category}</p>
-                <h2 className="mt-1 text-2xl font-semibold leading-tight">{p.name}</h2>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{p.brand} · {p.category}</p>
+                <h2 className="mt-1 text-2xl font-bold leading-tight">{p.name}</h2>
                 <div className="mt-2 flex items-center gap-2">
                   <Stars value={p.rating} />
                   <span className="text-sm text-muted-foreground">{p.rating} · {p.reviews} opiniones</span>
                 </div>
-                <p className="mt-4 text-3xl font-semibold">{cop(p.price)}</p>
+                <p className="mt-4 text-3xl font-extrabold">{cop(p.price)}</p>
                 <p className="text-sm text-muted-foreground">Hasta 12 cuotas sin interés</p>
               </div>
 
-              {fitsVehicle(p, active) ? (
-                <div className="flex gap-3 rounded-xl border border-success/30 bg-success-soft p-4">
-                  <ShieldCheck className="h-5 w-5 shrink-0 text-success" />
-                  <div>
-                    <p className="text-sm font-semibold text-success">Compatibilidad garantizada</p>
-                    <p className="text-sm text-muted-foreground">Encaja en tu {active.brand} {active.model} {active.year}. Si no, te devolvemos el dinero.</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="rounded-xl border border-border bg-muted/50 p-4 text-sm text-muted-foreground">
-                  No verificado para tu {active.model} {active.year}. Revisa la tabla de compatibilidad.
-                </div>
-              )}
+              {/* Feedback dinámico de compatibilidad */}
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25 }}
+                className={cn(
+                  "flex gap-3 rounded-2xl border p-4 shadow-sm",
+                  fitsVehicle(p, active)
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200"
+                    : "border-border bg-muted/50 text-muted-foreground"
+                )}
+              >
+                {fitsVehicle(p, active) ? (
+                  <>
+                    <ShieldCheck className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                        <span>100% Compatible con tu vehículo</span>
+                        <span className="rounded-full bg-emerald-600 text-white text-[10px] px-2 py-0.5 font-semibold">Garantizado</span>
+                      </p>
+                      <p className="text-xs text-emerald-900/80 dark:text-emerald-200/80 mt-1">
+                        Encaja exactamente en tu {active.brand} {active.model} {active.year}. Respaldado por garantía de devolución si la pieza no coincide con tu motor o chasis.
+                      </p>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <ShieldAlert className="h-5 w-5 shrink-0 text-amber-500 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-foreground">Compatibilidad no verificada</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Esta pieza no está homologada automáticamente para tu {active.brand} {active.model} ({active.year}). Consulta la ficha técnica o contacta a un mecánico antes de adquirirla.
+                      </p>
+                    </div>
+                  </>
+                )}
+              </motion.div>
 
               <div>
                 <h3 className="mb-2 text-sm font-semibold">Especificaciones técnicas</h3>

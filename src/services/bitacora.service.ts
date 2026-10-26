@@ -1,6 +1,12 @@
 import { createClient, isSupabaseConfigured } from "@/utils/supabase/client";
-import { USER_VEHICLES, RECORDS, type Brand, type MaintenanceRecord, type Vehicle } from "@/data/mock";
-import type { DbRegistroBitacora, DbVehiculo } from "@/types";
+import { USER_VEHICLES, RECORDS } from "@/data/mock";
+import type { Brand, DbRegistroBitacora, DbVehiculo, MaintenanceRecord, Vehicle } from "@/types";
+
+export const VEHICULOS_SELECT_COLUMNS =
+  "id, usuario_id, marca, modelo, ano, placa, kilometraje, motor, combustible, transmision, color, imagen_url, soat_vencimiento, tecno_vencimiento" as const;
+
+export const REGISTROS_BITACORA_SELECT_COLUMNS =
+  "id, vehiculo_id, fecha, descripcion_cambio, pieza_actualizada, repuesto_id, titulo, descripcion, kilometraje, taller, costo" as const;
 
 export function parseDbRecord(r: DbRegistroBitacora, currentVehicles: Vehicle[]): MaintenanceRecord {
   const rawDesc = String(r.descripcion_cambio || "");
@@ -57,7 +63,7 @@ export function parseDbRecord(r: DbRegistroBitacora, currentVehicles: Vehicle[])
 }
 
 /**
- * Obtiene los vehículos del garaje virtual
+ * Obtiene los vehículos del garaje virtual con columnas explícitas
  */
 export async function getVehiculos(): Promise<Vehicle[]> {
   const mode = process.env.NEXT_PUBLIC_DATA_SOURCE || "auto";
@@ -70,7 +76,7 @@ export async function getVehiculos(): Promise<Vehicle[]> {
     const supabase = createClient();
     const { data, error } = await supabase
       .from("vehiculos")
-      .select("*")
+      .select(VEHICULOS_SELECT_COLUMNS)
       .order("id", { ascending: true });
 
     if (error) {
@@ -82,7 +88,7 @@ export async function getVehiculos(): Promise<Vehicle[]> {
     }
 
     if (data && data.length > 0) {
-      return (data as DbVehiculo[]).map((v) => ({
+      return (data as DbVehiculo[]).map((v): Vehicle => ({
         id: String(v.id),
         brand: (v.marca || "Toyota") as Brand,
         model: v.modelo || "Vehículo",
@@ -103,17 +109,18 @@ export async function getVehiculos(): Promise<Vehicle[]> {
     }
 
     return USER_VEHICLES;
-  } catch (err) {
+  } catch (err: unknown) {
     if (mode === "supabase" && process.env.NODE_ENV === "production") {
       throw err;
     }
-    console.warn("[BitacoraService] Fallback local para vehículos:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn("[BitacoraService] Fallback local para vehículos:", message);
     return USER_VEHICLES;
   }
 }
 
 /**
- * Obtiene los registros de mantenimiento de la bitácora
+ * Obtiene los registros de mantenimiento de la bitácora con columnas optimizadas
  */
 export async function getRegistrosBitacora(currentVehicles: Vehicle[]): Promise<MaintenanceRecord[]> {
   const mode = process.env.NEXT_PUBLIC_DATA_SOURCE || "auto";
@@ -126,7 +133,7 @@ export async function getRegistrosBitacora(currentVehicles: Vehicle[]): Promise<
     const supabase = createClient();
     const { data, error } = await supabase
       .from("registros_bitacora")
-      .select("*")
+      .select(REGISTROS_BITACORA_SELECT_COLUMNS)
       .order("fecha", { ascending: false });
 
     if (error) {
@@ -142,11 +149,12 @@ export async function getRegistrosBitacora(currentVehicles: Vehicle[]): Promise<
     }
 
     return RECORDS;
-  } catch (err) {
+  } catch (err: unknown) {
     if (mode === "supabase" && process.env.NODE_ENV === "production") {
       throw err;
     }
-    console.warn("[BitacoraService] Fallback local para bitácora:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn("[BitacoraService] Fallback local para bitácora:", message);
     return RECORDS;
   }
 }
@@ -179,14 +187,15 @@ export async function saveRegistroBitacora(
       const { data, error } = await supabase
         .from("registros_bitacora")
         .insert(insertPayload)
-        .select();
+        .select("id");
 
       if (!error && data && data[0]?.id) {
         createdId = String(data[0].id);
         persistedInDb = true;
       }
-    } catch (err) {
-      console.warn("[BitacoraService] No se pudo persistir en Supabase, guardando en memoria local:", err);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn("[BitacoraService] No se pudo persistir en Supabase, guardando en memoria local:", message);
     }
   }
 
@@ -197,4 +206,3 @@ export async function saveRegistroBitacora(
 
   return { record: finalRecord, persistedInDb };
 }
-

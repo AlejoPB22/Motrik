@@ -1,6 +1,9 @@
 import { createClient, isSupabaseConfigured } from "@/utils/supabase/client";
-import { CATALOG, PARTS, type Brand, type Category, type Part } from "@/data/mock";
-import type { DbRepuesto } from "@/types";
+import { CATALOG, PARTS } from "@/data/mock";
+import type { Brand, Category, DbRepuesto, Part } from "@/types";
+
+export const REPUESTOS_SELECT_COLUMNS =
+  "id, nombre, marca, categoria_vehiculo, precio, precio_anterior, calificacion, resenas_count, stock, imagen_url, imagenes, compatibilidad, especificaciones, envio_gratis" as const;
 
 function getPartFallbackImage(category: string): string {
   const c = (category || "").toLowerCase();
@@ -15,7 +18,7 @@ function getPartFallbackImage(category: string): string {
 export function parseDbFits(compatText: string): { brand: Brand; model: string; years: number[] }[] {
   if (!compatText) return [];
   const results: { brand: Brand; model: string; years: number[] }[] = [];
-  const brands: Brand[] = ["Toyota", "Mazda", "Chevrolet", "Ford", "Renault", "Kia"];
+  const brands: readonly Brand[] = ["Toyota", "Mazda", "Chevrolet", "Ford", "Renault", "Kia"] as const;
   const lower = compatText.toLowerCase();
 
   for (const b of brands) {
@@ -58,6 +61,12 @@ export function mapDbRepuestoToPart(item: DbRepuesto): Part {
   const compat = String(item.compatibilidad || "Universal");
   const fits = parseDbFits(compat);
 
+  const rawSpecs = item.especificaciones;
+  const specs: Record<string, string> =
+    typeof rawSpecs === "object" && rawSpecs !== null
+      ? (rawSpecs as Record<string, string>)
+      : { Compatibilidad: compat, "Categoría Vehicular": category, Garantía: "12 meses" };
+
   return {
     id: String(item.id),
     name: item.nombre || "Repuesto Automotriz",
@@ -70,10 +79,7 @@ export function mapDbRepuestoToPart(item: DbRepuesto): Part {
     stock: Number(item.stock) || 15,
     images: item.imagenes ? (Array.isArray(item.imagenes) ? item.imagenes : [item.imagenes]) : [image],
     fits,
-    specs:
-      typeof item.especificaciones === "object" && item.especificaciones !== null
-        ? item.especificaciones
-        : { Compatibilidad: compat, "Categoría Vehicular": category, Garantía: "12 meses" },
+    specs,
     freeShipping: item.envio_gratis ?? Number(item.precio) >= 150000,
   };
 }
@@ -85,19 +91,20 @@ export interface RepuestosFilter {
 }
 
 /**
- * Servicio de catálogo de repuestos con soporte de fallback mock e integración a Supabase
+ * Servicio de catálogo de repuestos con soporte de fallback mock y consultas optimizadas a Supabase
  */
 export async function getRepuestos(filter: RepuestosFilter = {}): Promise<Part[]> {
   const mode = process.env.NEXT_PUBLIC_DATA_SOURCE || "auto";
 
-  // Modo mock forzado
+  // Modo mock forzado o variables ausentes
   if (mode === "mock" || !isSupabaseConfigured()) {
     return applyLocalFilters(PARTS, filter);
   }
 
   try {
     const supabase = createClient();
-    let query = supabase.from("repuestos").select("*");
+    // Selección explícita de columnas en lugar de comodín '*'
+    let query = supabase.from("repuestos").select(REPUESTOS_SELECT_COLUMNS);
 
     if (filter.category) {
       query = query.ilike("categoria_vehiculo", `%${filter.category}%`);
@@ -121,25 +128,25 @@ export async function getRepuestos(filter: RepuestosFilter = {}): Promise<Part[]
       return (data as DbRepuesto[]).map(mapDbRepuestoToPart);
     }
 
-    // Si filtró y no hubo coincidencias en BD, retorna vacío
+    // Si filtró y no hubo coincidencias en BD, retorna array vacío
     if (filter.category || (filter.onlyFit && filter.model)) {
       return [];
     }
 
     return PARTS;
-  } catch (err) {
+  } catch (err: unknown) {
     if (mode === "supabase" && process.env.NODE_ENV === "production") {
       throw err;
     }
-    console.warn("[RepuestosService] Excepción de conexión a Supabase, aplicando fallback local:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn("[RepuestosService] Excepción de conexión a Supabase, aplicando fallback local:", message);
     return applyLocalFilters(PARTS, filter);
   }
 }
 
 function applyLocalFilters(source: Part[], filter: RepuestosFilter): Part[] {
-  return source.filter((p) => {
+  return source.filter((p: Part) => {
     if (filter.category && p.category !== filter.category) return false;
     return true;
   });
 }
-

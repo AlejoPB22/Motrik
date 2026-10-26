@@ -1,6 +1,51 @@
 import { createClient, isSupabaseConfigured } from "@/utils/supabase/client";
-import { WORKSHOPS, type Review, type Specialty, type Workshop } from "@/data/mock";
-import type { DbMecanico, DbValoracion } from "@/types";
+import { WORKSHOPS } from "@/data/mock";
+import type { Review, Specialty, Workshop } from "@/types";
+
+export const DIRECTORIO_SELECT_COLUMNS = `
+  id,
+  especialidad,
+  ubicacion,
+  calificacion_promedio,
+  foto_url,
+  telefono,
+  horario,
+  anos_experiencia,
+  descripcion,
+  usuarios (
+    nombre,
+    correo
+  ),
+  valoraciones (
+    id,
+    puntuacion,
+    comentario,
+    fecha,
+    cliente:usuarios!valoraciones_cliente_id_fkey (
+      nombre
+    )
+  )
+` as const;
+
+export interface DbMecanicoRawJoin {
+  id: number | string;
+  especialidad?: string | null;
+  ubicacion?: string | null;
+  calificacion_promedio?: number | string | null;
+  foto_url?: string | null;
+  telefono?: string | null;
+  horario?: string | null;
+  anos_experiencia?: number | string | null;
+  descripcion?: string | null;
+  usuarios?: { nombre?: string | null; correo?: string | null } | { nombre?: string | null; correo?: string | null }[] | null;
+  valoraciones?: {
+    id?: number | string;
+    puntuacion: number | string;
+    comentario?: string | null;
+    fecha?: string | null;
+    cliente?: { nombre?: string | null } | { nombre?: string | null }[] | null;
+  }[] | null;
+}
 
 function getWorkshopImage(especialidad?: string | null): string {
   const s = (especialidad || "").toLowerCase();
@@ -11,9 +56,9 @@ function getWorkshopImage(especialidad?: string | null): string {
   return "/assets/shop.jpg";
 }
 
-export function mapDbMecanicoToWorkshop(m: DbMecanico): Workshop {
+export function mapDbMecanicoToWorkshop(m: DbMecanicoRawJoin): Workshop {
   const userObj = Array.isArray(m.usuarios) ? m.usuarios[0] : m.usuarios;
-  const nombreTaller = userObj?.nombre || "Taller Especializado Motrick";
+  const nombreTaller = userObj?.nombre || "Taller Especializado Motrik";
   const ubicacionStr = m.ubicacion || "Chapinero · Carrera 13 #54-21";
 
   const zoneParts = ubicacionStr.split("·");
@@ -25,7 +70,7 @@ export function mapDbMecanicoToWorkshop(m: DbMecanico): Workshop {
 
   const reviews: Review[] =
     Array.isArray(m.valoraciones) && m.valoraciones.length > 0
-      ? m.valoraciones.map((v: DbValoracion, idx: number) => {
+      ? m.valoraciones.map((v, idx: number): Review => {
           const clienteObj = Array.isArray(v.cliente) ? v.cliente[0] : v.cliente;
           const autorNombre = clienteObj?.nombre || "Cliente Verificado";
           return {
@@ -80,7 +125,7 @@ export interface DirectorioFilter {
 }
 
 /**
- * Servicio del directorio de talleres y mecánicos con soporte dual mock/Supabase
+ * Servicio del directorio de talleres y mecánicos con soporte dual mock/Supabase y consultas optimizadas
  */
 export async function getDirectorio(filter: DirectorioFilter = {}): Promise<Workshop[]> {
   const mode = process.env.NEXT_PUBLIC_DATA_SOURCE || "auto";
@@ -91,30 +136,8 @@ export async function getDirectorio(filter: DirectorioFilter = {}): Promise<Work
 
   try {
     const supabase = createClient();
-    let query = supabase.from("mecanicos").select(`
-      id,
-      especialidad,
-      ubicacion,
-      calificacion_promedio,
-      foto_url,
-      telefono,
-      horario,
-      anos_experiencia,
-      descripcion,
-      usuarios (
-        nombre,
-        correo
-      ),
-      valoraciones (
-        id,
-        puntuacion,
-        comentario,
-        fecha,
-        cliente:usuarios!valoraciones_cliente_id_fkey (
-          nombre
-        )
-      )
-    `);
+    // Selección explícita con proyección relacional requerida por PostgREST
+    let query = supabase.from("mecanicos").select(DIRECTORIO_SELECT_COLUMNS);
 
     if (filter.specialties && filter.specialties.length === 1) {
       query = query.ilike("especialidad", `%${filter.specialties[0]}%`);
@@ -131,21 +154,22 @@ export async function getDirectorio(filter: DirectorioFilter = {}): Promise<Work
     }
 
     if (data && data.length > 0) {
-      return (data as unknown as DbMecanico[]).map(mapDbMecanicoToWorkshop);
+      return (data as unknown as DbMecanicoRawJoin[]).map(mapDbMecanicoToWorkshop);
     }
 
     return applyLocalFilters(WORKSHOPS, filter);
-  } catch (err) {
+  } catch (err: unknown) {
     if (mode === "supabase" && process.env.NODE_ENV === "production") {
       throw err;
     }
-    console.warn("[DirectorioService] Excepción de conexión a Supabase, usando fallback:", err);
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn("[DirectorioService] Excepción de conexión a Supabase, usando fallback:", message);
     return applyLocalFilters(WORKSHOPS, filter);
   }
 }
 
 function applyLocalFilters(source: Workshop[], filter: DirectorioFilter): Workshop[] {
-  return source.filter((w) => {
+  return source.filter((w: Workshop) => {
     if (filter.zone && filter.zone !== "all" && w.zone !== filter.zone) return false;
     if (
       filter.specialties &&
@@ -157,4 +181,3 @@ function applyLocalFilters(source: Workshop[], filter: DirectorioFilter): Worksh
     return true;
   });
 }
-
