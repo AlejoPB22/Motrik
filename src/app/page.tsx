@@ -69,9 +69,9 @@ function calculateExpiryStatus(dateStr?: string | null): ExpiryStatus | null {
       level: "expired",
       label: `Vencido hace ${Math.abs(diffDays)} días`,
       badge: "Vencido",
-      cardClass: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300 shadow-sm",
+      cardClass: "border-border bg-card shadow-soft hover:shadow-lift",
       badgeClass: "bg-red-500 text-white shadow-sm",
-      dotClass: "bg-red-500 animate-ping",
+      dotClass: "bg-red-200 animate-ping",
       icon: ShieldAlert,
     };
   }
@@ -82,9 +82,9 @@ function calculateExpiryStatus(dateStr?: string | null): ExpiryStatus | null {
       level: "urgent",
       label: diffDays === 0 ? "¡Vence hoy!" : `¡Vence en ${diffDays} días!`,
       badge: "¡Urgente!",
-      cardClass: "border-red-500/40 bg-red-500/10 text-red-700 dark:text-red-300 shadow-sm",
+      cardClass: "border-border bg-card shadow-soft hover:shadow-lift",
       badgeClass: "bg-red-500 text-white shadow-sm",
-      dotClass: "bg-red-500 animate-pulse",
+      dotClass: "bg-red-200 animate-pulse",
       icon: AlertTriangle,
     };
   }
@@ -95,9 +95,9 @@ function calculateExpiryStatus(dateStr?: string | null): ExpiryStatus | null {
       level: "warning",
       label: `Vence en ${diffDays} días`,
       badge: "Próximo a vencer",
-      cardClass: "border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 shadow-sm",
+      cardClass: "border-border bg-card shadow-soft hover:shadow-lift",
       badgeClass: "bg-amber-500 text-white shadow-sm",
-      dotClass: "bg-amber-400 animate-pulse",
+      dotClass: "bg-amber-200 animate-pulse",
       icon: Clock,
     };
   }
@@ -107,9 +107,9 @@ function calculateExpiryStatus(dateStr?: string | null): ExpiryStatus | null {
     level: "ok",
     label: `Al día (${diffDays} días de vigencia)`,
     badge: "Vigente",
-    cardClass: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 shadow-sm",
+    cardClass: "border-border bg-card shadow-soft hover:shadow-lift",
     badgeClass: "bg-emerald-600 text-white shadow-sm",
-    dotClass: "bg-emerald-400",
+    dotClass: "bg-emerald-200",
     icon: CheckCircle2,
   };
 }
@@ -193,17 +193,17 @@ export default function HomePage() {
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3 }}
-              className={cn("rounded-2xl border p-5 transition-all hover:shadow-soft", soatStatus.cardClass)}
+              className="rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-soft shadow-sm"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider opacity-75">Seguro Obligatorio (SOAT)</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Seguro Obligatorio (SOAT)</span>
                   </div>
-                  <p className="text-xl font-bold tracking-tight">
+                  <p className="text-xl font-bold tracking-tight text-foreground">
                     {soatStatus.label}
                   </p>
-                  <p className="text-xs opacity-80">
+                  <p className="text-xs text-muted-foreground">
                     Fecha límite: {new Date(active.soatExpiry + "T12:00").toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}
                   </p>
                 </div>
@@ -215,7 +215,7 @@ export default function HomePage() {
                   </span>
                   <Link
                     href="/bitacora"
-                    className="text-[11px] font-semibold underline underline-offset-2 opacity-80 hover:opacity-100"
+                    className="text-[11px] font-semibold text-primary underline underline-offset-2 opacity-80 hover:opacity-100"
                   >
                     Actualizar
                   </Link>
@@ -230,17 +230,17 @@ export default function HomePage() {
               initial={{ opacity: 0, scale: 0.98 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.3, delay: 0.05 }}
-              className={cn("rounded-2xl border p-5 transition-all hover:shadow-soft", tecnoStatus.cardClass)}
+              className="rounded-2xl border border-border bg-card p-5 transition-all hover:shadow-soft shadow-sm"
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold uppercase tracking-wider opacity-75">Revisión Técnico-Mecánica (CDA)</span>
+                    <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Revisión Técnico-Mecánica (CDA)</span>
                   </div>
-                  <p className="text-xl font-bold tracking-tight">
+                  <p className="text-xl font-bold tracking-tight text-foreground">
                     {tecnoStatus.label}
                   </p>
-                  <p className="text-xs opacity-80">
+                  <p className="text-xs text-muted-foreground">
                     Fecha límite: {new Date(active.tecnoExpiry + "T12:00").toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}
                   </p>
                 </div>
@@ -252,7 +252,7 @@ export default function HomePage() {
                   </span>
                   <Link
                     href="/bitacora"
-                    className="text-[11px] font-semibold underline underline-offset-2 opacity-80 hover:opacity-100"
+                    className="text-[11px] font-semibold text-primary underline underline-offset-2 opacity-80 hover:opacity-100"
                   >
                     Actualizar
                   </Link>

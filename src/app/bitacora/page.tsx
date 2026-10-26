@@ -33,7 +33,7 @@ const km = (n: number) => `${n.toLocaleString("es-CO")} km`;
 
 // Control de fechas límite y alertas de documentos reglamentarios
 function getExpiryStatus(dateStr?: string) {
-  if (!dateStr) return { status: "missing", days: null, text: "Sin registrar", color: "text-muted-foreground", bg: "bg-muted border-border", dot: "bg-muted-foreground" };
+  if (!dateStr) return { status: "missing", days: null, text: "Sin registrar", color: "text-muted-foreground bg-muted border-border", bg: "bg-card border-border", dot: "bg-muted-foreground" };
   const target = new Date(dateStr + "T00:00:00");
   const now = new Date();
   now.setHours(0, 0, 0, 0);
@@ -45,9 +45,9 @@ function getExpiryStatus(dateStr?: string) {
       days: Math.abs(diffDays),
       text: `Venció hace ${Math.abs(diffDays)} días`,
       badge: "Vencido",
-      color: "text-red-700 dark:text-red-300 border-red-500/40",
-      bg: "bg-red-500/10 border-red-500/30",
-      dot: "bg-red-500 animate-ping",
+      color: "bg-red-500 text-white shadow-sm border-transparent",
+      bg: "bg-card border-border",
+      dot: "bg-red-200 animate-ping",
       icon: AlertTriangle,
     };
   }
@@ -57,9 +57,9 @@ function getExpiryStatus(dateStr?: string) {
       days: diffDays,
       text: diffDays === 0 ? "¡Vence hoy!" : `¡Urgente! Vence en ${diffDays} días`,
       badge: "¡Urgente!",
-      color: "text-red-700 dark:text-red-300 border-red-500/40",
-      bg: "bg-red-500/10 border-red-500/30",
-      dot: "bg-red-500 animate-pulse",
+      color: "bg-red-500 text-white shadow-sm border-transparent",
+      bg: "bg-card border-border",
+      dot: "bg-red-200 animate-pulse",
       icon: AlertTriangle,
     };
   }
@@ -69,9 +69,9 @@ function getExpiryStatus(dateStr?: string) {
       days: diffDays,
       text: `Vence en ${diffDays} días`,
       badge: "Por vencer",
-      color: "text-amber-700 dark:text-amber-300 border-amber-500/40",
-      bg: "bg-amber-500/10 border-amber-500/30",
-      dot: "bg-amber-400 animate-pulse",
+      color: "bg-amber-500 text-white shadow-sm border-transparent",
+      bg: "bg-card border-border",
+      dot: "bg-amber-200 animate-pulse",
       icon: Clock,
     };
   }
@@ -80,9 +80,9 @@ function getExpiryStatus(dateStr?: string) {
     days: diffDays,
     text: `Vigente (${diffDays} días)`,
     badge: "Vigente",
-    color: "text-emerald-700 dark:text-emerald-300 border-emerald-500/40",
-    bg: "bg-emerald-500/10 border-emerald-500/30",
-    dot: "bg-emerald-400",
+    color: "bg-emerald-600 text-white shadow-sm border-transparent",
+    bg: "bg-card border-border",
+    dot: "bg-emerald-200",
     icon: CheckCircle2,
   };
 }
@@ -233,11 +233,11 @@ export default function BitacoraPage() {
             </div>
 
             <div className="mt-4 space-y-3">
-              <div className={cn("p-3.5 rounded-xl border transition-all", soatStatus.bg)}>
+              <div className="p-3.5 rounded-xl border border-border bg-card shadow-soft transition-all">
                 <div className="flex items-start justify-between">
                   <div>
-                    <span className="text-xs uppercase font-bold tracking-wider opacity-75">SOAT</span>
-                    <p className="font-bold text-sm mt-0.5">
+                    <span className="text-xs uppercase font-bold tracking-wider text-muted-foreground">SOAT</span>
+                    <p className="font-bold text-sm mt-0.5 text-foreground">
                       {active.soatExpiry
                         ? new Date(active.soatExpiry + "T12:00").toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })
                         : "No configurado"}
@@ -251,11 +251,11 @@ export default function BitacoraPage() {
               </div>
 
               {active.hasTecno !== false ? (
-                <div className={cn("p-3.5 rounded-xl border transition-all", tecnoStatus.bg)}>
+                <div className="p-3.5 rounded-xl border border-border bg-card shadow-soft transition-all">
                   <div className="flex items-start justify-between">
                     <div>
-                      <span className="text-xs uppercase font-bold tracking-wider opacity-75">Tecnomecánica</span>
-                      <p className="font-bold text-sm mt-0.5">
+                      <span className="text-xs uppercase font-bold tracking-wider text-muted-foreground">Tecnomecánica</span>
+                      <p className="font-bold text-sm mt-0.5 text-foreground">
                         {active.tecnoExpiry
                           ? new Date(active.tecnoExpiry + "T12:00").toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })
                           : "No configurado"}
