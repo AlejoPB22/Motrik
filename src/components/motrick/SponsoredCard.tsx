@@ -93,7 +93,7 @@ export const SPONSORED_ADS = {
     link: "#",
   },
   cdaRevision: {
-    sponsor: "Red CDA Autorizados Bogotá",
+    sponsor: "Red CDA Autorizados Cartagena",
     title: "Revisión Técnico-Mecánica en Centros Aliados",
     desc: "Pistas computarizadas de frenos, suspensión y gases. Agenda turno sin filas con tarifa regulada por el Ministerio de Transporte.",
     ctaText: "Reservar turno CDA",
@@ -103,7 +103,7 @@ export const SPONSORED_ADS = {
   telepeaje: {
     sponsor: "FacilPass / Flypass",
     title: "Tag de Telepeaje para tu Auto",
-    desc: "Pasa por peajes sin efectivo y accede a parqueaderos de centros comerciales en Bogotá sin tiquetes.",
+    desc: "Pasa por peajes sin efectivo y accede a parqueaderos de centros comerciales en Cartagena sin tiquetes.",
     ctaText: "Solicitar TAG gratis",
     categoryTag: "Movilidad Inteligente",
     link: "#",

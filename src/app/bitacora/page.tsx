@@ -23,7 +23,7 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { PARTS, WORKSHOPS, cop, type Brand, type MaintenanceRecord, type Vehicle } from "@/data/mock";
+import { PARTS, WORKSHOPS, cop, formatVehicleName, type Brand, type MaintenanceRecord, type Vehicle } from "@/data/mock";
 import { useApp } from "@/lib/store";
 import { Img, PageHeader } from "@/components/motrick/shared";
 import { cn } from "@/lib/utils";
@@ -180,22 +180,51 @@ export default function BitacoraPage() {
         let activeVehicles = storeVehicles;
 
         if (!vErr && vData && vData.length > 0) {
-          activeVehicles = vData.map((v: DbVehiculo) => ({
-            id: String(v.id),
-            brand: (v.marca || "Toyota") as Brand,
-            model: v.modelo || "Vehículo",
-            year: Number(v.ano) || 2022,
-            plate: v.placa || `COL-${String(v.id).padStart(3, "0")}`,
-            odometer: Number(v.kilometraje) || 48230,
-            engine: v.motor || "2.0L Skyactiv-G",
-            fuel: v.combustible || "Gasolina",
-            transmission: v.transmision || "Automática 6V",
-            color: v.color || "Gris Machine",
-            image: v.imagen_url || (String(v.marca).toLowerCase().includes("toyota") ? "/assets/car2.jpg" : "/assets/car1.jpg"),
-            soatExpiry: v.soat_vencimiento || "2026-11-15",
-            tecnoExpiry: v.tecno_vencimiento || "2027-03-20",
-            hasTecno: true,
-          }));
+          // Deduplicar vehículos por placa para evitar repeticiones
+          const seenPlates = new Set<string>();
+          const uniqueVehicles = vData.filter((v: DbVehiculo) => {
+            const plate = (v.placa || "").trim().toUpperCase();
+            if (!plate || seenPlates.has(plate)) return false;
+            seenPlates.add(plate);
+            return true;
+          });
+
+          activeVehicles = uniqueVehicles.map((v: DbVehiculo) => {
+            let sExpiry = v.soat_vencimiento || "2026-11-15";
+            let tExpiry = v.tecno_vencimiento || "2027-03-20";
+            let hTecno = true;
+
+            try {
+              const stored = typeof window !== "undefined" ? localStorage.getItem("motrik_vehicles_docs") : null;
+              if (stored) {
+                const map = JSON.parse(stored);
+                if (map[String(v.id)]) {
+                  if (map[String(v.id)].soatExpiry !== undefined) sExpiry = map[String(v.id)].soatExpiry;
+                  if (map[String(v.id)].tecnoExpiry !== undefined) tExpiry = map[String(v.id)].tecnoExpiry;
+                  if (map[String(v.id)].hasTecno !== undefined) hTecno = map[String(v.id)].hasTecno;
+                }
+              }
+            } catch (e) {
+              console.warn("Error rehidratando documentos:", e);
+            }
+
+            return {
+              id: String(v.id),
+              brand: (v.marca || "Toyota") as Brand,
+              model: v.modelo || "Vehículo",
+              year: Number(v.ano) || 2022,
+              plate: v.placa || `COL-${String(v.id).padStart(3, "0")}`,
+              odometer: Number(v.kilometraje) || 48230,
+              engine: v.motor || "2.0L Skyactiv-G",
+              fuel: v.combustible || "Gasolina",
+              transmission: v.transmision || "Automática 6V",
+              color: v.color || "Gris Machine",
+              image: v.imagen_url || (String(v.marca).toLowerCase().includes("toyota") ? "/assets/car2.jpg" : "/assets/car1.jpg"),
+              soatExpiry: sExpiry,
+              tecnoExpiry: tExpiry,
+              hasTecno: hTecno,
+            };
+          });
           if (activeEffect) {
             setVehicles(activeVehicles);
             setActiveId(activeVehicles[0].id);
@@ -210,7 +239,15 @@ export default function BitacoraPage() {
         if (!activeEffect) return;
 
         if (!rErr && rData && rData.length > 0) {
-          const mappedRecords = rData.map((r: DbRegistroBitacora) => parseDbRecord(r, activeVehicles));
+          // Deduplicar registros de bitácora por fecha, título y kilometraje
+          const seenRecords = new Set<string>();
+          const uniqueRecords = rData.filter((r: DbRegistroBitacora) => {
+            const key = `${r.vehiculo_id}-${r.titulo}-${r.fecha}-${r.kilometraje}`;
+            if (seenRecords.has(key)) return false;
+            seenRecords.add(key);
+            return true;
+          });
+          const mappedRecords = uniqueRecords.map((r: DbRegistroBitacora) => parseDbRecord(r, activeVehicles));
           setRecords(mappedRecords);
         }
       } catch (err) {
@@ -239,6 +276,38 @@ export default function BitacoraPage() {
     if (newRecord.km > active.odometer) {
       setVehicles((prev) => prev.map((v) => (v.id === active.id ? { ...v, odometer: newRecord.km } : v)));
       updateVehicle(active.id, { odometer: newRecord.km });
+    }
+  };
+
+  const handleUpdateVehicleDocs = async (id: string, data: Partial<Vehicle>) => {
+    // 1. Actualizar estado local reactivo inmediatamente
+    setVehicles((prev) => prev.map((v) => (v.id === id ? { ...v, ...data } : v)));
+    // 2. Actualizar store global
+    updateVehicle(id, data);
+    // 3. Persistir en localStorage
+    try {
+      const stored = localStorage.getItem("motrik_vehicles_docs");
+      const map = stored ? JSON.parse(stored) : {};
+      map[id] = { ...(map[id] || {}), ...data };
+      localStorage.setItem("motrik_vehicles_docs", JSON.stringify(map));
+    } catch (e) {
+      console.warn("Error guardando en localStorage:", e);
+    }
+    // 4. Intentar persistencia en Supabase
+    try {
+      const supabase = createClient();
+      const numId = Number(id);
+      if (!isNaN(numId)) {
+        await supabase
+          .from("vehiculos")
+          .update({
+            soat_vencimiento: data.soatExpiry,
+            tecno_vencimiento: data.tecnoExpiry,
+          })
+          .eq("id", numId);
+      }
+    } catch (e) {
+      console.warn("Error guardando en Supabase:", e);
     }
   };
 
@@ -277,7 +346,7 @@ export default function BitacoraPage() {
           >
             <img src={v.image} alt="" className="h-12 w-16 rounded-xl object-cover" />
             <div>
-              <p className="text-sm font-semibold">{v.brand} {v.model}</p>
+              <p className="text-sm font-semibold">{formatVehicleName(v.brand, v.model)}</p>
               <p className="text-xs text-muted-foreground">{v.year} · {v.plate}</p>
             </div>
           </button>
@@ -294,7 +363,7 @@ export default function BitacoraPage() {
           >
             <Img src={active.image} alt={active.model} className="aspect-[16/10]" />
             <div className="p-5">
-              <h2 className="text-xl font-semibold">{active.brand} {active.model} {active.year}</h2>
+              <h2 className="text-xl font-semibold">{formatVehicleName(active.brand, active.model)} {active.year}</h2>
               <p className="text-sm text-muted-foreground">Placa {active.plate} · {active.color}</p>
               <div className="mt-5 rounded-xl bg-gradient-ink p-4 text-ink-foreground">
                 <p className="flex items-center gap-1.5 text-xs uppercase tracking-wider opacity-70">
@@ -471,26 +540,48 @@ export default function BitacoraPage() {
         activeVehicle={active}
         onAddRecord={handleRecordAdded}
       />
-      <DocumentModal vehicle={active} open={openDocs} onOpenChange={setOpenDocs} />
+      <DocumentModal
+        vehicle={active}
+        open={openDocs}
+        onOpenChange={setOpenDocs}
+        onSave={handleUpdateVehicleDocs}
+      />
     </div>
   );
 }
 
 // Modal para configurar SOAT y Tecnomecánica
-function DocumentModal({ vehicle, open, onOpenChange }: { vehicle: Vehicle; open: boolean; onOpenChange: (o: boolean) => void }) {
-  const { updateVehicle } = useApp();
+function DocumentModal({
+  vehicle,
+  open,
+  onOpenChange,
+  onSave,
+}: {
+  vehicle: Vehicle;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onSave: (id: string, data: Partial<Vehicle>) => void;
+}) {
   const [soat, setSoat] = useState(vehicle.soatExpiry || "");
   const [tecno, setTecno] = useState(vehicle.tecnoExpiry || "");
   const [hasTecno, setHasTecno] = useState(vehicle.hasTecno ?? true);
 
+  useEffect(() => {
+    if (open) {
+      setSoat(vehicle.soatExpiry || "");
+      setTecno(vehicle.tecnoExpiry || "");
+      setHasTecno(vehicle.hasTecno ?? true);
+    }
+  }, [vehicle, open]);
+
   const save = () => {
-    updateVehicle(vehicle.id, {
+    onSave(vehicle.id, {
       soatExpiry: soat,
       tecnoExpiry: hasTecno ? tecno : undefined,
       hasTecno,
     });
     toast.success("Fechas de documentos actualizadas", {
-      description: `Recordatorios guardados para tu ${vehicle.model} (${vehicle.plate})`,
+      description: `Recordatorios guardados para tu ${formatVehicleName(vehicle.brand, vehicle.model)} (${vehicle.plate})`,
     });
     onOpenChange(false);
   };
@@ -504,7 +595,7 @@ function DocumentModal({ vehicle, open, onOpenChange }: { vehicle: Vehicle; open
           <FileCheck2 className="h-5 w-5 text-primary" /> Documentos Obligatorios
         </DialogTitle>
         <p className="-mt-2 text-sm text-muted-foreground">
-          {vehicle.brand} {vehicle.model} · Placa {vehicle.plate}
+          {formatVehicleName(vehicle.brand, vehicle.model)} · Placa {vehicle.plate}
         </p>
 
         <div className="space-y-4 pt-2">

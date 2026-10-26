@@ -86,13 +86,13 @@ INSERT INTO public.usuarios (id, nombre, correo, rol)
 VALUES ('b0000000-0000-0000-0000-000000000002'::uuid, 'MotorLab Diagnóstico', 'motorlab@motrik.com', 'mecanico')
 ON CONFLICT (id) DO UPDATE SET nombre = EXCLUDED.nombre;
 
--- 3.4 Usuario Mecánico 3: Frenos & Ejes del Norte
+-- 3.4 Usuario Mecánico 3: Frenos & Ejes del Caribe
 INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, created_at, updated_at, raw_app_meta_data, raw_user_meta_data, is_super_admin)
-VALUES ('b0000000-0000-0000-0000-000000000003'::uuid, '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated', 'authenticated', 'frenosejes@motrik.com', crypt('Motrik2026*', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"nombre":"Frenos & Ejes del Norte"}', false)
+VALUES ('b0000000-0000-0000-0000-000000000003'::uuid, '00000000-0000-0000-0000-000000000000'::uuid, 'authenticated', 'authenticated', 'frenosejes@motrik.com', crypt('Motrik2026*', gen_salt('bf')), now(), now(), now(), '{"provider":"email","providers":["email"]}', '{"nombre":"Frenos & Ejes del Caribe"}', false)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO public.usuarios (id, nombre, correo, rol)
-VALUES ('b0000000-0000-0000-0000-000000000003'::uuid, 'Frenos & Ejes del Norte', 'frenosejes@motrik.com', 'mecanico')
+VALUES ('b0000000-0000-0000-0000-000000000003'::uuid, 'Frenos & Ejes del Caribe', 'frenosejes@motrik.com', 'mecanico')
 ON CONFLICT (id) DO UPDATE SET nombre = EXCLUDED.nombre;
 
 -- ==============================================================================
@@ -103,10 +103,10 @@ VALUES
 (
   'b0000000-0000-0000-0000-000000000001'::uuid,
   'Frenos, Suspensión, Mantenimiento preventivo',
-  'Chapinero · Carrera 13 #54-21',
+  'Manga · Calle Real #24-15',
   4.9,
   '/assets/shop.jpg',
-  '+57 601 345 7788',
+  '+57 605 660 7788',
   'Lun–Sáb 7:00–18:00',
   14,
   'Taller especializado en vehículos japoneses y livianos con equipos de diagnóstico de concesionario.'
@@ -114,10 +114,10 @@ VALUES
 (
   'b0000000-0000-0000-0000-000000000002'::uuid,
   'Motor, Eléctrico, Mantenimiento preventivo',
-  'Usaquén · Calle 140 #9-45',
+  'Bocagrande · Carrera 3 #6-40',
   4.8,
   '/assets/engine.jpg',
-  '+57 601 612 0091',
+  '+57 605 655 0091',
   'Lun–Vie 8:00–18:00',
   9,
   'Diagnóstico electrónico avanzado, escaneo computarizado, inyección y reparación general de motores.'
@@ -125,10 +125,10 @@ VALUES
 (
   'b0000000-0000-0000-0000-000000000003'::uuid,
   'Frenos, Suspensión',
-  'Suba · Av Suba #118-30',
+  'Pie de la Popa · Calle 30 #21-18',
   4.6,
   '/assets/wheel.jpg',
-  '+57 601 477 2310',
+  '+57 605 669 2310',
   'Lun–Sáb 8:00–17:00',
   6,
   'Alineación computarizada 3D, balanceo de rines y reconstrucción de sistemas de frenado.'
@@ -147,7 +147,7 @@ VALUES
 (5, 'Diagnóstico transparente y entrega puntual. Muy recomendado.', now() - interval '10 days', 'a0000000-0000-0000-0000-000000000001'::uuid, 'b0000000-0000-0000-0000-000000000001'::uuid),
 (5, 'Cambiaron las pastillas de freno en tiempo récord. Todo excelente.', now() - interval '25 days', 'a0000000-0000-0000-0000-000000000001'::uuid, 'b0000000-0000-0000-0000-000000000001'::uuid),
 (4, 'Buen servicio con el motor, revisaron bobinas e inyectores sin sobrecostos.', now() - interval '14 days', 'a0000000-0000-0000-0000-000000000001'::uuid, 'b0000000-0000-0000-0000-000000000002'::uuid),
-(5, 'Excelente alineación y balanceo en Suba. Muy atentos.', now() - interval '30 days', 'a0000000-0000-0000-0000-000000000001'::uuid, 'b0000000-0000-0000-0000-000000000003'::uuid);
+(5, 'Excelente alineación y balanceo en Pie de la Popa. Muy atentos.', now() - interval '30 days', 'a0000000-0000-0000-0000-000000000001'::uuid, 'b0000000-0000-0000-0000-000000000003'::uuid);
 
 -- ==============================================================================
 -- 6. Semilla de Repuestos (public.repuestos)
@@ -236,6 +236,9 @@ VALUES
 -- ==============================================================================
 -- 7. Semilla de Vehículos (public.vehiculos)
 -- ==============================================================================
+DELETE FROM public.registros_bitacora WHERE vehiculo_id IN (SELECT id FROM public.vehiculos WHERE placa IN ('KDM-482', 'JTX-917'));
+DELETE FROM public.vehiculos WHERE placa IN ('KDM-482', 'JTX-917');
+
 INSERT INTO public.vehiculos (marca, modelo, ano, usuario_id, placa, kilometraje, motor, combustible, transmision, color, imagen_url, soat_vencimiento, tecno_vencimiento)
 VALUES
 (
@@ -325,6 +328,9 @@ CREATE POLICY valoraciones_anon_insert ON public.valoraciones FOR INSERT TO anon
 -- Políticas RLS para vehículos y registros de bitácora
 DROP POLICY IF EXISTS vehiculos_anon_read ON public.vehiculos;
 CREATE POLICY vehiculos_anon_read ON public.vehiculos FOR SELECT TO anon, authenticated USING (true);
+
+DROP POLICY IF EXISTS vehiculos_anon_update ON public.vehiculos;
+CREATE POLICY vehiculos_anon_update ON public.vehiculos FOR UPDATE TO anon, authenticated USING (true) WITH CHECK (true);
 
 DROP POLICY IF EXISTS registros_bitacora_anon_read ON public.registros_bitacora;
 CREATE POLICY registros_bitacora_anon_read ON public.registros_bitacora FOR SELECT TO anon, authenticated USING (true);

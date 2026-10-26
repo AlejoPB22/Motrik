@@ -13,20 +13,48 @@ export function Stars({ value, size = 14, className }: { value: number; size?: n
   );
 }
 
-export function Img({ src, alt, className }: { src: string; alt: string; className?: string }) {
+export function Img({
+  src,
+  alt,
+  className,
+  fallback = "/assets/shop.jpg",
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+  fallback?: string;
+}) {
+  const [imgSrc, setImgSrc] = useState(src);
   const [loaded, setLoaded] = useState(false);
   const ref = useRef<HTMLImageElement>(null);
-  useEffect(() => { if (ref.current?.complete) setLoaded(true); }, [src]);
+
+  useEffect(() => {
+    setImgSrc(src);
+    setLoaded(false);
+  }, [src]);
+
+  useEffect(() => {
+    if (ref.current?.complete && ref.current?.naturalWidth > 0) {
+      setLoaded(true);
+    }
+  }, [imgSrc]);
+
   return (
     <div className={cn("relative overflow-hidden bg-muted", className)}>
       {!loaded && <div className="absolute inset-0 animate-pulse bg-muted" />}
       <img
         ref={ref}
-        src={src}
+        src={imgSrc}
         alt={alt}
         loading="lazy"
         onLoad={() => setLoaded(true)}
-        onError={() => setLoaded(true)}
+        onError={() => {
+          if (imgSrc !== fallback) {
+            setImgSrc(fallback);
+          } else {
+            setLoaded(true);
+          }
+        }}
         className={cn("h-full w-full object-cover transition-all duration-500", loaded ? "opacity-100" : "opacity-0")}
       />
     </div>

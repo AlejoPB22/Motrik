@@ -3,9 +3,9 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Car, ChevronDown, Moon, NotebookPen, Package, Search, Sun, User, Wrench, Check, LogOut, Settings, Bell } from "lucide-react";
+import { Bell, Car, Check, ChevronDown, LogOut, Moon, NotebookPen, Package, Search, Settings, Sun, User, Wrench } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
-import { PARTS, WORKSHOPS, cop } from "@/data/mock";
+import { PARTS, WORKSHOPS, cop, formatVehicleName } from "@/data/mock";
 import { useApp } from "@/lib/store";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
@@ -93,7 +93,7 @@ export function Header() {
             <DropdownMenu>
               <DropdownMenuTrigger className="hidden items-center gap-2 rounded-full border border-border bg-card py-1.5 pl-2 pr-3 text-sm font-medium transition-colors hover:bg-muted sm:flex">
                 <span className="grid h-6 w-6 place-items-center rounded-full bg-accent text-accent-foreground"><Car className="h-3.5 w-3.5" /></span>
-                <span className="max-w-[140px] truncate">{active.model} {active.year}</span>
+                <span className="max-w-[140px] truncate">{formatVehicleName(active.brand, active.model)} {active.year}</span>
                 <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64">
@@ -101,7 +101,7 @@ export function Header() {
                 {vehicles.map((v) => (
                   <DropdownMenuItem key={v.id} onClick={() => setActiveId(v.id)} className="gap-3 py-2">
                     <img src={v.image} alt="" className="h-9 w-12 rounded object-cover" />
-                    <div className="flex-1"><p className="text-sm font-medium">{v.brand} {v.model} {v.year}</p><p className="text-xs text-muted-foreground">{v.plate}</p></div>
+                    <div className="flex-1"><p className="text-sm font-medium">{formatVehicleName(v.brand, v.model)} {v.year}</p><p className="text-xs text-muted-foreground">{v.plate}</p></div>
                     {v.id === active.id && <Check className="h-4 w-4 text-primary" />}
                   </DropdownMenuItem>
                 ))}

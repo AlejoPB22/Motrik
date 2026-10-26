@@ -89,7 +89,7 @@ Como línea secundaria de sostenimiento, se habilitan espacios pasivos en los m�
 | **Identificador** | **RF-02** |
 | **Nombre** | Directorio de talleres mecánicos con filtros de especialidad |
 | **Descripción** | La plataforma debe presentar un directorio interactivo de establecimientos mecánicos, permitiendo filtrar por especialidad técnica (Frenos, Motor, Suspensión, Transmisión, Eléctrico), calificación promedio y estado de verificación. |
-| **Fuente** | Elicitación: Necesidad de localización rápida de talleres especializados en Bogotá. |
+| **Fuente** | Elicitación: Necesidad de localización rápida de talleres especializados en Cartagena. |
 | **Prioridad** | Alta |
 | **Criterio de Aceptación** | La consulta PostgREST a `mecanicos` filtra dinámicamente mediante `ILIKE` sobre la columna `especialidad` y actualiza la cuadrícula de talleres en tiempo real. |
 
@@ -151,11 +151,11 @@ Como línea secundaria de sostenimiento, se habilitan espacios pasivos en los m�
 | Campo | Detalle Técnico |
 | :--- | :--- |
 | **Identificador** | **RNF-03** |
-| **Nombre** | Pasarela y flujo simulado de pago (Checkout Seguro) |
-| **Descripción** | El módulo de compra de repuestos debe proveer un asistente de pago en 4 pasos (Resumen, Tarjeta, Procesamiento y Comprobante) con animación 3D de tarjeta interactiva, sin procesar transacciones bancarias reales. |
-| **Fuente** | Alcance de MVP y requerimiento de experiencia de usuario segura. |
+| **Nombre** | Enlace directo con taller aliado para repuestos (Sin intermediación financiera) |
+| **Descripción** | La plataforma no intermedia cobros ni procesa pagos bancarios por repuestos. El sistema provee un canal de enlace directo con el taller autorizado en Cartagena (vía WhatsApp y llamada directa), transfiriendo las especificaciones de compatibilidad vehicular para coordinar la disponibilidad, compra y montaje presencial. |
+| **Fuente** | Modelo de Negocio B2B y Blindaje Jurídico (Art. 53, Ley 1480 de 2011). |
 | **Prioridad** | Media |
-| **Criterio de Aceptación** | La interfaz exige exactamente 16 dígitos de tarjeta y 3 dígitos de CVV, generando una orden ficticia (MT-XXXXXX) sin almacenar datos sensibles de tarjetas de crédito. |
+| **Criterio de Aceptación** | El modal de contacto asigna automáticamente el taller idóneo en Cartagena según la especialidad de la pieza, genera el mensaje técnico estructurado sin solicitar datos financieros y provee acceso al perfil del taller en el directorio (Defecto D2 corregido). |
 
 ### Ficha Técnica: RNF-04
 | Campo | Detalle Técnico |
@@ -231,7 +231,7 @@ Modela la estructura estática del sistema, niveles de visibilidad, atributos ti
 Ilustran la interacción temporal entre Usuario, Frontend (Next.js/React), Backend API y base de datos relacional Supabase (PostgreSQL Cloud) para los 3 flujos clave:
 * **Figura 3 (Búsqueda de Repuestos por Vehículo - RF-04):** Secuencia descendente de consultas parametrizadas de catálogo según marca y modelo.
 * **Figura 4 (Registro en la Bitácora de Mantenimiento - RF-01):** Validación de sesión y persistencia transaccional del servicio técnico en `registros_bitacora`.
-* **Figura 5 (Simulación de Compra de Repuestos y Pasarela de Pago - RNF-03):** Flujo simulado de pago interactivo en 4 pasos con validación estricta de tarjeta.
+* **Figura 5 (Enlace Directo con Taller para Repuestos - RNF-03):** Flujo de consulta y enlace directo con taller aliado en Cartagena vía WhatsApp y telefonía.
 
 ### 7.2.3. Diagrama de Actividades (Figura 6)
 Modela el flujo procedural de registro en bitácora con un nodo de decisión (rombo) que evalúa si el mantenimiento incluye la vinculación opcional de una pieza del catálogo antes de consolidar el historial del automóvil.
@@ -250,7 +250,7 @@ Topología de nodos en la nube: Dispositivo Cliente (Navegador/App), Servidor Cl
 | :--- | :--- | :--- | :--- |
 | **Casos de Uso (Directorio y Seguridad)** | Búsqueda pasiva de talleres sin proceso de acreditación de identidad comercial. | Alto porcentaje de desconfianza en talleres mecánicos (estudio AAA, 2016) y necesidad de exención de garantía solidaria (Ley 1480/2011). | Se crearon los casos de uso *Solicitar verificación de taller* (Mecánico) y *Verificar y aprobar talleres* (Administrador), formalizando el esquema de confianza y membresía sin asumir responsabilidad civil sobre reparaciones. |
 | **Modelo de Monetización y Publicidad** | La plataforma no contemplaba monetización secundaria ni reglas de pauta publicitaria. | Necesidad de ingresos sostenibles sin comprometer la velocidad ni la seriedad técnica de la herramienta automotriz. | Se definió la publicidad nativa contextual (RNF-04) con política de Brand Safety (veto de juegos, apuestas y +18) y tag visible "Patrocinado" exigido por la SIC. |
-| **Checkout de Repuestos** | Simulación simple con formulario genérico sin retroalimentación visual. | Altos índices de abandono de carritos en comercio electrónico y temor del usuario al ingreso de tarjetas. | Se implementó la tarjeta animada interactiva con giro 3D (Framer Motion) y validación estricta de 16 dígitos y CVV de 3 dígitos (RNF-03). |
+| **Adquisición de Repuestos** | Simulación de pasarela transaccional que contravenía el modelo B2B y generaba riesgo de responsabilidad solidaria. | Preferencia de los conductores y talleres por cotizar y coordinar directamente la instalación física presencial. | Se eliminó el cobro con tarjeta y se implementó el enlace directo con taller vía WhatsApp y telefonía en Cartagena (RNF-03). |
 
 ---
 
@@ -271,7 +271,7 @@ Topología de nodos en la nube: Dispositivo Cliente (Navegador/App), Servidor Cl
 * **RF-05: Verificación y validación de talleres mecánicos** (AP / JF)
 * **RNF-01: Arquitectura Full-Stack Next.js** (AP)
 * **RNF-02: Persistencia en Supabase con RLS** (JF)
-* **RNF-03: Mockups de Transacciones y Checkout** (AP)
+* **RNF-03: Enlace Directo con Taller y Contacto sin Intermediación Financiera** (AP)
 * **RNF-04: Visualización de publicidad nativa contextual y Brand Safety** (AP)
 
 ## 8.2. Repositorio, Ramas y Trazabilidad Git
@@ -296,14 +296,14 @@ Para respaldar las pruebas técnicas sin simulaciones abstractas, se generó y e
 * **Usuario autenticado:** `a0000000-0000-0000-0000-000000000001` (`alejopaternina22@gmail.com`).
 * **Vehículos de prueba:** Mazda 3 Grand Touring 2021 (Placa KDM-482, Odómetro 48.230 km) y Toyota Hilux 4x4 2019 (Placa THX-901, Odómetro 72.400 km).
 * **Catálogo inicial:** 6 repuestos de alta rotación (Filtros, Pastillas cerámicas, Aceite sintético, Bujías de iridio).
-* **Directorio:** 3 talleres mecánicos vinculados en Bogotá con especialidades en Frenos, Motor y Mecánica General.
+* **Directorio:** 3 talleres mecánicos vinculados en Cartagena con especialidades en Frenos, Motor y Mecánica General.
 
 ### Reglas de Negocio Formalizadas:
 * **R1 (Consistencia de Bitácora - RF-01):** El registro exige un vehículo del usuario, fecha válida y un odómetro mayor o igual al kilometraje actual del automóvil.
 * **R2 (Vinculación de Pieza - RF-01):** El registro permite asociar un repuesto opcionalmente sin bloquear el guardado si se deja nulo.
 * **R3 (Filtro y Rango de Calificación - RF-02 y RF-03):** El directorio filtra por especialidad y calcula el promedio dentro del intervalo estricto de 1.0 a 5.0 estrellas.
 * **R4 (Compatibilidad Técnica - RF-04):** El buscador categoriza piezas compatibles según marca/modelo/año del vehículo seleccionado o categoría "Universal".
-* **R5 (Validación de Maqueta y RLS - RNF-02 y RNF-03):** La pasarela simulada exige 16 dígitos de tarjeta y 3 de CVV, y las políticas RLS en PostgreSQL bloquean accesos a datos ajenos.
+* **R5 (Contacto Directo sin Intermediación Financiera - RNF-03):** Motrik no procesa pagos de repuestos ni capta números de tarjeta de crédito; la adquisición e instalación se coordinan de manera directa y transparente con el taller aliado en Cartagena.
 
 ---
 
@@ -320,7 +320,7 @@ Para respaldar las pruebas técnicas sin simulaciones abstractas, se generó y e
 | **T04**<br>*(R3 - Filtro)* | Directorio: Filtro especialidad = "Frenos", calificación mínima 4.0. | Aceptada: Retorna talleres que coinciden con el parámetro. | **Aceptada:** Devuelve 2 talleres reales; primer registro: `Torque Automotriz` (Script automatizado `test-real.mjs`). | **Sí** |
 | **T05**<br>*(R3 - Límite)* | Directorio: Inserción directa en tabla `valoraciones` con puntuación = 6. | Rechazada: Restricción CHECK de base de datos deniega valor > 5. | **Rechazada:** Motor PostgreSQL arroja error `42501` (violación de RLS) y `23514` (`check_violation`) en Supabase (`test-real.mjs`). | **Sí** |
 | **T06**<br>*(R4 - Válido)* | Repuestos: Vehículo activo = Mazda 3 (2021), Categoría = Frenos. | Aceptada: Retorna repuestos con badge "Compatible con tu auto". | **Aceptada:** Recupera 4 repuestos compatibles reales; primero: `Pastillas de freno cerámicas delanteras` (`test-real.mjs`). | **Sí** |
-| **T07**<br>*(R5 - Límite)* | Checkout: Tarjeta simulada de 15 dígitos y CVV de 2 dígitos. | Rechazada: Formulario detiene el avance al procesamiento simulado. | **Rechazada (Defecto D2 corregido):** Controlador `handleProceedToPayment` en `Checkout.tsx` exige 16 dígitos y 3 de CVV. | **Sí** |
+| **T07**<br>*(R5 - Contacto)* | Contacto Repuesto: Solicitud de pieza en catálogo desde modal. | Aceptada: Enlace directo con taller en Cartagena sin intermediación ni solicitud de tarjetas. | **Aceptada (Defecto D2 corregido):** Modal asigna taller por categoría (Manga, Bocagrande o Popa) y genera enlace a WhatsApp/teléfono sin captar datos financieros. | **Sí** |
 | **T08**<br>*(R5 - RLS)* | Seguridad: Intento de insertar en `registros_bitacora` con auto de otro usuario. | Rechazada: Política RLS `registros_bitacora_crud_own` deniega la escritura. | **Rechazada:** Supabase retorna error de violación de políticas de seguridad por fila (`new row violates row-level security policy`). | **Sí** |
 
 *Nota.* Elaboración propia basada en la ejecución técnica directa contra la base de datos Supabase (`seed.sql`) y la aplicación Next.js (2026).
@@ -350,23 +350,19 @@ const submit = async () => {
 
 ---
 
-### Defecto D2: Validación de Formato de Pago en Checkout
+### Defecto D2: Eliminación de Pasarela Transaccional y Transición a Contacto Directo con Taller
 * **Requisito Asociado:** RNF-03 (Regla R5).
-* **Condición del Fallo:** Detectado en caso **T07**, al observar que el botón para avanzar al paso de procesamiento permitía ejecutar el clic con tarjetas de 15 dígitos o CVV incompleto.
-* **Corrección Aplicada:** En `src/components/motrick/Checkout.tsx`, se reemplazó la invocación directa por el controlador `handleProceedToPayment` que sanitiza y evalúa la longitud estricta de ambos campos.
+* **Condición del Fallo:** Detectado en caso **T07**, al observar que la versión preliminar incluía una pasarela con simulación de tarjeta de crédito, lo cual contravenía el Art. 53 de la Ley 1480 de 2011 (portal de contacto) y arriesgaba responsabilidad solidaria por garantías mecánicas.
+* **Corrección Aplicada:** En `src/components/motrick/Checkout.tsx` y `src/app/repuestos/page.tsx`, se retiró el formulario de pago y se implementó el modal de contacto directo que asigna el taller especializado en Cartagena según categoría y genera enlace pre-rellenado a WhatsApp y telefonía.
 
-```typescript
-// Fragmento corregido en Checkout (src/components/motrick/Checkout.tsx)
-const handleProceedToPayment = () => {
-  setTouched(true);
-  const rawCard = card.number.replace(/\s/g, "");
-  if (rawCard.length !== 16 || card.cvv.trim().length !== 3) {
-    toast.error("Ingrese una tarjeta válida de 16 dígitos y un CVV de 3 dígitos.");
-    return;
-  }
-  if (!valid) return;
-  setStep(2);
-};
+```tsx
+// Enlace directo con taller en Cartagena
+<a href={whatsappUrl} target="_blank" className="bg-success ...">
+  <MessageCircle className="h-4 w-4" /> Contactar por WhatsApp
+</a>
+<a href={`tel:${cleanPhone}`}>
+  <Phone className="h-3.5 w-3.5" /> Llamar al Taller
+</a>
 ```
 
 ---
@@ -389,10 +385,10 @@ Se reejecutaron **T04** (Filtros de directorio) y **T08** (Políticas RLS), comp
 
 ### Revisión por Pares (Peer Review)
 * **Alejandro Paternina (AP):** Auditó y validó los casos de prueba y correcciones de Bitácora y Directorio (**T01 a T05, Defecto D1**) gestionados por Johan Brieva.
-* **Johan Brieva (JF):** Auditó las pruebas y componentes de Repuestos y Checkout (**T06 a T08, Defecto D2**) a cargo de Alejandro Paternina.
+* **Johan Brieva (JF):** Auditó las pruebas y componentes de Repuestos y Contacto Directo con Talleres (**T06 a T08, Defecto D2**) a cargo de Alejandro Paternina.
 
 ### Declaración Formal de Liberación a Producción:
-> *"El equipo de ingeniería aprueba unánimemente la liberación del MVP de Motrick a producción tras verificar y corregir los defectos D1 (validación de kilometraje mínimo en T02) y D2 (longitud estricta de tarjeta en checkout simulado en T07). El 100% de los casos de prueba iniciales (T01-T08), las pruebas de la regla de verificación (N01-N02) y las pruebas de regresión (T04, T08) operan satisfactoriamente sobre Next.js y el cluster de PostgreSQL en Supabase."*
+> *"El equipo de ingeniería aprueba unánimemente la liberación del MVP de Motrick a producción tras verificar y corregir los defectos D1 (validación de kilometraje mínimo en T02) y D2 (eliminación de pasarela financiera y transición a contacto directo con talleres en Cartagena en T07). El 100% de los casos de prueba iniciales (T01-T08), las pruebas de la regla de verificación (N01-N02) y las pruebas de regresión (T04, T08) operan satisfactoriamente sobre Next.js y el cluster de PostgreSQL en Supabase."*
 
 ---
 
@@ -404,7 +400,7 @@ En el marco de la ingeniería de software y la rúbrica de aseguramiento de cali
   * El rechazo de violaciones de dominio en PostgreSQL (`CHECK (puntuacion >= 1 AND puntuacion <= 5)` con error `23514`).
   * El blindaje de mutaciones arbitrarias a nivel de motor SQL mediante políticas Row-Level Security (código `42501`).
   * La confirmación de orden cronológico en odómetros (guardas de control en `submit()` para `kmN >= activeVehicle.odometer`).
-  * La sanitización estricta en checkout (16 dígitos y 3 de CVV) y compilación limpia de Next.js sin errores de TypeScript.
+  * La eliminación de formularios financieros en resguardo del Art. 53 de la Ley 1480 y compilación limpia de Next.js sin errores de TypeScript.
 
 * **Validación (*"¿Estamos construyendo el producto correcto?"*):** Proceso orientado al valor y satisfacción de las necesidades reales de los interesados identificados en la elicitación. En Motrick, se comprobó mediante:
   * La mitigación de la desconfianza estructural en talleres mecánicos (67% de conductores según AAA) mediante perfiles auditados, reseñas auténticas y verificación documental (RF-05).

@@ -35,6 +35,13 @@ export type Vehicle = {
   hasTecno?: boolean;
 };
 
+export function formatVehicleName(brand?: string | null, model?: string | null): string {
+  const b = (brand || "").trim();
+  const m = (model || "").trim();
+  if (!b) return m;
+  if (!m) return b;
+  return m.toLowerCase().startsWith(b.toLowerCase()) ? m : `${b} ${m}`;
+}
 
 export const USER_VEHICLES: Vehicle[] = [
   {
@@ -112,7 +119,7 @@ export const PARTS: Part[] = [
 
 export type Specialty = "Frenos" | "Motor" | "Suspensión" | "Eléctrico" | "Mantenimiento preventivo";
 export const SPECIALTIES: Specialty[] = ["Frenos", "Motor", "Suspensión", "Eléctrico", "Mantenimiento preventivo"];
-export const ZONES = ["Chapinero", "Usaquén", "Suba", "Kennedy", "Fontibón", "Teusaquillo"];
+export const ZONES = ["Manga", "Bocagrande", "Pie de la Popa", "El Bosque", "Ternera", "Crespo"];
 
 export type Review = { id: string; author: string; avatar: string; date: string; rating: number; text: string; vehicle: string };
 export type Workshop = {
@@ -128,12 +135,12 @@ const R = (seed: number): Review[] => [
 ];
 
 export const WORKSHOPS: Workshop[] = [
-  { id: "w1", name: "Torque Automotriz", zone: "Chapinero", address: "Cra 13 #54-21", image: IMG.mech, verified: true, specialties: ["Frenos", "Suspensión", "Mantenimiento preventivo"], rating: 4.9, reviewCount: 328, hours: "Lun–Sáb 7:00–18:00", phone: "+57 601 345 7788", years: 14, about: "Taller especializado en vehículos japoneses con equipos de diagnóstico de concesionario.", reviews: R(1) },
-  { id: "w2", name: "MotorLab Diagnóstico", zone: "Usaquén", address: "Cl 140 #9-45", image: IMG.engine, verified: true, specialties: ["Motor", "Eléctrico"], rating: 4.8, reviewCount: 214, hours: "Lun–Vie 8:00–18:00", phone: "+57 601 612 0091", years: 9, about: "Diagnóstico electrónico avanzado, reprogramación y reparación de motores.", reviews: R(2) },
-  { id: "w3", name: "Frenos & Ejes del Norte", zone: "Suba", address: "Av Suba #118-30", image: IMG.wheel, verified: false, specialties: ["Frenos", "Suspensión"], rating: 4.5, reviewCount: 96, hours: "Lun–Sáb 8:00–17:00", phone: "+57 601 477 2310", years: 6, about: "Alineación, balanceo y sistemas de frenado para livianos y camionetas.", reviews: R(3) },
-  { id: "w4", name: "Centro Técnico Kennedy", zone: "Kennedy", address: "Av 1 de Mayo #72-15", image: IMG.garage, verified: true, specialties: ["Mantenimiento preventivo", "Motor"], rating: 4.6, reviewCount: 451, hours: "Lun–Dom 7:00–19:00", phone: "+57 601 290 4455", years: 18, about: "Servicio rápido de mantenimiento con más de 12 bahías y repuestos originales.", reviews: R(4) },
-  { id: "w5", name: "VoltCar Eléctricos", zone: "Fontibón", address: "Cl 17 #100-22", image: IMG.battery, verified: true, specialties: ["Eléctrico"], rating: 4.7, reviewCount: 132, hours: "Lun–Sáb 8:00–18:00", phone: "+57 601 735 6602", years: 7, about: "Especialistas en sistemas eléctricos, baterías, alternadores e híbridos.", reviews: R(5) },
-  { id: "w6", name: "Suspensiones Teusaquillo", zone: "Teusaquillo", address: "Cra 24 #39-10", image: IMG.parts, verified: false, specialties: ["Suspensión", "Frenos"], rating: 3.9, reviewCount: 58, hours: "Lun–Vie 8:00–17:30", phone: "+57 601 288 1940", years: 4, about: "Reparación de suspensión, amortiguadores y dirección hidráulica.", reviews: R(6) },
+  { id: "w1", name: "Torque Automotriz", zone: "Manga", address: "Calle Real #24-15", image: IMG.mech, verified: true, specialties: ["Frenos", "Suspensión", "Mantenimiento preventivo"], rating: 4.9, reviewCount: 328, hours: "Lun–Sáb 7:00–18:00", phone: "+57 605 660 7788", years: 14, about: "Taller especializado en vehículos japoneses con equipos de diagnóstico de concesionario en Cartagena.", reviews: R(1) },
+  { id: "w2", name: "MotorLab Diagnóstico", zone: "Bocagrande", address: "Cra 3 #6-40", image: IMG.engine, verified: true, specialties: ["Motor", "Eléctrico"], rating: 4.8, reviewCount: 214, hours: "Lun–Vie 8:00–18:00", phone: "+57 605 655 0091", years: 9, about: "Diagnóstico electrónico avanzado, reprogramación y reparación de motores.", reviews: R(2) },
+  { id: "w3", name: "Frenos & Ejes del Caribe", zone: "Pie de la Popa", address: "Calle 30 #21-18", image: IMG.wheel, verified: false, specialties: ["Frenos", "Suspensión"], rating: 4.5, reviewCount: 96, hours: "Lun–Sáb 8:00–17:00", phone: "+57 605 669 2310", years: 6, about: "Alineación, balanceo y sistemas de frenado para livianos y camionetas.", reviews: R(3) },
+  { id: "w4", name: "Centro Técnico El Bosque", zone: "El Bosque", address: "Av. Crisanto Luque #48-20", image: IMG.garage, verified: true, specialties: ["Mantenimiento preventivo", "Motor"], rating: 4.6, reviewCount: 451, hours: "Lun–Dom 7:00–19:00", phone: "+57 605 667 4455", years: 18, about: "Servicio rápido de mantenimiento con más de 12 bahías y repuestos originales.", reviews: R(4) },
+  { id: "w5", name: "VoltCar Eléctricos", zone: "Ternera", address: "Diag 32 #71-55", image: IMG.battery, verified: true, specialties: ["Eléctrico"], rating: 4.7, reviewCount: 132, hours: "Lun–Sáb 8:00–18:00", phone: "+57 605 653 6602", years: 7, about: "Especialistas en sistemas eléctricos, baterías, alternadores e híbridos.", reviews: R(5) },
+  { id: "w6", name: "Suspensiones del Caribe", zone: "Crespo", address: "Cra 1 #62-10", image: IMG.parts, verified: false, specialties: ["Suspensión", "Frenos"], rating: 3.9, reviewCount: 58, hours: "Lun–Vie 8:00–17:30", phone: "+57 605 664 1940", years: 4, about: "Reparación de suspensión, amortiguadores y dirección hidráulica.", reviews: R(6) },
 ];
 
 export type MaintenanceRecord = {
@@ -142,11 +149,11 @@ export type MaintenanceRecord = {
 
 export const RECORDS: MaintenanceRecord[] = [
   { id: "m1", vehicleId: "v1", date: "2026-09-12", km: 47800, title: "Cambio de aceite sintético", description: "Cambio de aceite 5W-30 y filtro. Revisión de niveles y presión de llantas.", workshop: "Torque Automotriz", cost: 285000, part: "Aceite sintético 5W-30 (4L) · Mobil 1" },
-  { id: "m2", vehicleId: "v1", date: "2026-05-30", km: 41250, title: "Cambio de pastillas de freno", description: "Pastillas delanteras cerámicas; rectificado de discos.", workshop: "Frenos & Ejes del Norte", cost: 420000, part: "Pastillas de freno cerámicas · Brembo" },
+  { id: "m2", vehicleId: "v1", date: "2026-05-30", km: 41250, title: "Cambio de pastillas de freno", description: "Pastillas delanteras cerámicas; rectificado de discos.", workshop: "Frenos & Ejes del Caribe", cost: 420000, part: "Pastillas de freno cerámicas · Brembo" },
   { id: "m3", vehicleId: "v1", date: "2026-01-14", km: 35600, title: "Alineación y balanceo", description: "Alineación computarizada 3D y balanceo de las cuatro ruedas.", workshop: "Torque Automotriz", cost: 140000 },
-  { id: "m4", vehicleId: "v1", date: "2025-08-03", km: 28900, title: "Mantenimiento de 30.000 km", description: "Bujías, filtro de aire, filtro de cabina y líquido de frenos.", workshop: "Centro Técnico Kennedy", cost: 690000, part: "Bujías iridio (juego x4) · NGK" },
-  { id: "m5", vehicleId: "v2", date: "2026-08-20", km: 111900, title: "Cambio de amortiguadores", description: "Amortiguadores delanteros y revisión de bujes.", workshop: "Suspensiones Teusaquillo", cost: 980000, part: "Amortiguador delantero a gas · Monroe" },
-  { id: "m6", vehicleId: "v2", date: "2026-03-11", km: 104300, title: "Cambio de aceite y filtros", description: "Aceite diésel 15W-40, filtro de combustible y de aire.", workshop: "Centro Técnico Kennedy", cost: 410000 },
+  { id: "m4", vehicleId: "v1", date: "2025-08-03", km: 28900, title: "Mantenimiento de 30.000 km", description: "Bujías, filtro de aire, filtro de cabina y líquido de frenos.", workshop: "Centro Técnico El Bosque", cost: 690000, part: "Bujías iridio (juego x4) · NGK" },
+  { id: "m5", vehicleId: "v2", date: "2026-08-20", km: 111900, title: "Cambio de amortiguadores", description: "Amortiguadores delanteros y revisión de bujes.", workshop: "Suspensiones del Caribe", cost: 980000, part: "Amortiguador delantero a gas · Monroe" },
+  { id: "m6", vehicleId: "v2", date: "2026-03-11", km: 104300, title: "Cambio de aceite y filtros", description: "Aceite diésel 15W-40, filtro de combustible y de aire.", workshop: "Centro Técnico El Bosque", cost: 410000 },
 ];
 
 export const cop = (n: number) => new Intl.NumberFormat("es-CO", { style: "currency", currency: "COP", maximumFractionDigits: 0 }).format(n);

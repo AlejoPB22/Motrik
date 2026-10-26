@@ -13,7 +13,7 @@
 Motrik adopta un modelo de monetización B2B sustentado en visibilidad, posicionamiento y membresías de servicios de valor agregado, **descartando de manera explícita el cobro de comisiones sobre las reparaciones mecánicas**.
 
 Bajo este esquema Freemium:
-* **Registro Base Gratuito:** Cualquier taller o mecánico formalmente constituido en Bogotá puede registrarse y figurar en el directorio estándar sin costo.
+* **Registro Base Gratuito:** Cualquier taller o mecánico formalmente constituido en Cartagena puede registrarse y figurar en el directorio estándar sin costo.
 * **Membresías Premium y Destaque (Listing Fee / SaaS):** Los establecimientos pueden pagar una suscripción mensual o anual para:
   1. Posicionamiento prioritario en los primeros resultados de búsqueda del directorio.
   2. Insignia destacada de **"Taller Verificado"** tras auditoría documental.

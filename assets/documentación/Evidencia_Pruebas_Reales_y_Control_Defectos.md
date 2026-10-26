@@ -157,49 +157,34 @@ Durante el proceso de auditoría y pruebas del sistema, se identificaron y solve
 
 ---
 
-### Defecto D2: Validación Estricta de Tarjeta y CVV en Pasarela de Pago
-* **Ubicación:** `src/components/motrick/Checkout.tsx`
-* **Función intervenida:** `handleProceedToPayment()` en el botón CTA de Pago
-* **Clasificación:** Defecto de Validación de Entrada en Pasarela Simulada (RNF-03)
+### Defecto D2: Eliminación de Pasarela Transaccional y Transición a Contacto Directo con Taller
+* **Ubicación:** `src/components/motrick/Checkout.tsx` y `src/app/repuestos/page.tsx`
+* **Componente intervenido:** Modal de Contacto y Reserva de Repuestos
+* **Clasificación:** Blindaje Jurídico y Modelo B2B (Art. 53 Ley 1480 de 2011 y RNF-03)
 * **Descripción del Defecto:**  
-  El formulario de pago no bloqueaba explícitamente el clic hacia la animación de procesamiento bancario si la tarjeta no contaba con exactamente 16 dígitos o el CVV no tenía exactamente 3 dígitos, confiando únicamente en la visualización pasiva de mensajes de error de campo.
+  La versión preliminar incluía una pasarela con simulación de tarjeta de crédito, lo cual contravenía el principio de no intermediación financiera de Motrik y generaba riesgo de responsabilidad solidaria mercantil por garantías y mano de obra mecánica ante reclamos de consumidores.
 * **Solución Implementada:**  
-  Se creó el controlador centralizado `handleProceedToPayment` que sanitiza los espacios del número de tarjeta (`replace(/\s/g, '')`), valida la longitud exacta de 16 caracteres y los 3 dígitos del CVV, disparando una notificación toast instructiva en caso de discrepancia.
+  Se retiró por completo el formulario bancario y se implementó el canal de enlace directo con el taller especializado en Cartagena según la categoría del repuesto, permitiendo contacto inmediato vía WhatsApp con mensaje técnico precargado y llamadas telefónicas directas.
 
-#### Código Antes:
+#### Código Antes (Simulación de tarjeta y pasarela):
 ```tsx
-  <Button 
-    variant="cta" 
-    size="lg" 
-    className="h-12 flex-1" 
-    onClick={() => { setTouched(true); if (valid) setStep(2); }}
-  >
-    <Lock className="h-4 w-4" /> Pagar {cop(total)}
-  </Button>
+// Formulario transaccional con tarjeta y CVV
+<input placeholder="4242 4242 4242 4242" />
+<input placeholder="CVV" />
+<Button variant="cta">
+  <Lock className="h-4 w-4" /> Pagar {cop(total)}
+</Button>
 ```
 
-#### Código Corregido (Después):
+#### Código Corregido (Después - Contacto directo con taller):
 ```tsx
-  const handleProceedToPayment = () => {
-    setTouched(true);
-    const rawCard = card.number.replace(/\s/g, "");
-    if (rawCard.length !== 16 || card.cvv.trim().length !== 3) {
-      toast.error("Ingrese una tarjeta válida de 16 dígitos y un CVV de 3 dígitos.");
-      return;
-    }
-    if (!valid) return;
-    setStep(2);
-  };
-
-  // En el JSX:
-  <Button 
-    variant="cta" 
-    size="lg" 
-    className="h-12 flex-1" 
-    onClick={handleProceedToPayment}
-  >
-    <Lock className="h-4 w-4" /> Pagar {cop(total)}
-  </Button>
+// Modal de enlace directo con el taller en Cartagena
+<a href={whatsappUrl} target="_blank" className="bg-success ...">
+  <MessageCircle className="h-4 w-4" /> Contactar por WhatsApp
+</a>
+<a href={`tel:${cleanPhone}`}>
+  <Phone className="h-3.5 w-3.5" /> Llamar al Taller
+</a>
 ```
 
 ---

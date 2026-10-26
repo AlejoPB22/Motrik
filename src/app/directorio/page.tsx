@@ -57,9 +57,9 @@ interface DbMecanico {
 function mapDbMecanicoToWorkshop(m: DbMecanico): Workshop {
   const userObj = Array.isArray(m.usuarios) ? m.usuarios[0] : m.usuarios;
   const nombreTaller = userObj?.nombre || "Taller Especializado Motrick";
-  const ubicacionStr = m.ubicacion || "Chapinero · Carrera 13 #54-21";
+  const ubicacionStr = m.ubicacion || "Manga · Calle Real #24-15";
   const parts = ubicacionStr.split(/[·,]/);
-  const zone = parts[0]?.trim() || "Bogotá";
+  const zone = parts[0]?.trim() || "Cartagena";
   const address = parts.slice(1).join(",").trim() || ubicacionStr;
 
   // Promedio de calificaciones calculadas desde valoraciones
@@ -112,9 +112,9 @@ function mapDbMecanicoToWorkshop(m: DbMecanico): Workshop {
     rating: avgRating,
     reviewCount: Math.max(reviewCount, 1),
     hours: m.horario || "Lun–Sáb 7:30–18:00",
-    phone: m.telefono || "+57 601 345 7788",
+    phone: m.telefono || "+57 605 660 7788",
     years: Number(m.anos_experiencia) || 12,
-    about: m.descripcion || `Taller especializado en ${m.especialidad || "mantenimiento automotriz"} con técnicos calificados en Bogotá.`,
+    about: m.descripcion || `Taller especializado en ${m.especialidad || "mantenimiento automotriz"} con técnicos calificados en Cartagena.`,
     reviews,
   };
 }
@@ -229,7 +229,7 @@ function DirectorioContent() {
       <PageHeader
         eyebrow="Directorio"
         title="Talleres y mecánicos verificados"
-        subtitle="Talleres evaluados por la comunidad de conductores Motrick en Bogotá."
+        subtitle="Talleres evaluados por la comunidad de conductores Motrick en Cartagena."
       >
         <Button
           variant="outline"
@@ -455,7 +455,7 @@ function VerificationRequestModal({ open, onOpenChange }: { open: boolean; onOpe
           <ShieldCheck className="h-5 w-5 text-primary" /> Verificación de Taller (RF-05)
         </DialogTitle>
         <p className="-mt-2 text-sm text-muted-foreground">
-          Obtén la insignia de Taller Verificado y posiciónate prioritariamente ante miles de conductores en Bogotá.
+          Obtén la insignia de Taller Verificado y posiciónate prioritariamente ante miles de conductores en Cartagena.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-3.5 pt-2">

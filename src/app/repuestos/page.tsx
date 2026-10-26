@@ -2,19 +2,30 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { BadgeCheck, Minus, Plus, ShieldCheck, SlidersHorizontal, Truck, X } from "lucide-react";
+import { BadgeCheck, MapPin, MessageCircle, Minus, Phone, Plus, ShieldCheck, SlidersHorizontal, Store, X } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CATALOG, CATEGORIES, PARTS, cop, fitsVehicle, type Brand, type Category, type Part } from "@/data/mock";
+import { CATALOG, CATEGORIES, PARTS, WORKSHOPS, cop, fitsVehicle, formatVehicleName, type Brand, type Category, type Part, type Workshop } from "@/data/mock";
 import { useApp } from "@/lib/store";
 import { Chip, Img, PageHeader, Stars } from "@/components/motrick/shared";
-import { Checkout } from "@/components/motrick/Checkout";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/utils/supabase/client";
 import { SponsoredCard, SPONSORED_ADS } from "@/components/motrick/SponsoredCard";
+
+function getAssignedWorkshop(part: Part): Workshop {
+  const cat = (part.category || "").toLowerCase();
+  if (cat.includes("freno") || cat.includes("suspens")) {
+    return WORKSHOPS.find((w) => w.id === "w3") || WORKSHOPS[2];
+  }
+  if (cat.includes("motor") || cat.includes("electr") || cat.includes("eléctr") || cat.includes("lubricante") || cat.includes("aceite") || cat.includes("filtro")) {
+    return WORKSHOPS.find((w) => w.id === "w2") || WORKSHOPS[1];
+  }
+  return WORKSHOPS[0];
+}
 
 function getPartFallbackImage(category: string): string {
   const c = (category || "").toLowerCase();
@@ -129,7 +140,6 @@ function RepuestosContent() {
   const [sort, setSort] = useState("relevance");
   const [onlyFit, setOnlyFit] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [checkout, setCheckout] = useState<{ part: Part; qty: number } | null>(null);
   const [parts, setParts] = useState<Part[]>(PARTS);
 
   useEffect(() => {
@@ -321,7 +331,7 @@ function RepuestosContent() {
                     {p.oldPrice && <span className="text-xs font-semibold text-success">{Math.round((1 - p.price / p.oldPrice) * 100)}% OFF</span>}
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-xs">
-                    {p.freeShipping && <span className="font-medium text-success">Envío gratis</span>}
+                    {p.freeShipping && <span className="font-medium text-success">Disponible en taller</span>}
                     <span className={p.stock < 8 ? "text-cta" : "text-muted-foreground"}>
                       {p.stock < 8 ? `¡Últimas ${p.stock}!` : "En stock"}
                     </span>
@@ -350,19 +360,12 @@ function RepuestosContent() {
       <PartDetail
         part={selected}
         onClose={() => router.push("/repuestos")}
-        onBuy={(qty) => {
-          if (selected) {
-            setCheckout({ part: selected, qty });
-            router.push("/repuestos");
-          }
-        }}
       />
-      <Checkout part={checkout?.part ?? null} qty={checkout?.qty ?? 1} open={!!checkout} onOpenChange={(o) => !o && setCheckout(null)} />
     </div>
   );
 }
 
-function PartDetail({ part, onClose, onBuy }: { part: Part | null; onClose: () => void; onBuy: (qty: number) => void }) {
+function PartDetail({ part, onClose }: { part: Part | null; onClose: () => void }) {
   const { active } = useApp();
   const [img, setImg] = useState(0);
   const [qty, setQty] = useState(1);
@@ -377,6 +380,7 @@ function PartDetail({ part, onClose, onBuy }: { part: Part | null; onClose: () =
   }, [part]);
 
   const p = part ?? last;
+  const workshop = p ? getAssignedWorkshop(p) : WORKSHOPS[0];
 
   return (
     <Sheet open={!!part} onOpenChange={(o) => !o && onClose()}>
@@ -414,7 +418,9 @@ function PartDetail({ part, onClose, onBuy }: { part: Part | null; onClose: () =
                   <span className="text-sm text-muted-foreground">{p.rating} · {p.reviews} opiniones</span>
                 </div>
                 <p className="mt-4 text-3xl font-semibold">{cop(p.price)}</p>
-                <p className="text-sm text-muted-foreground">Hasta 12 cuotas sin interés</p>
+                <p className="text-sm font-medium text-primary flex items-center gap-1.5 mt-1">
+                  <Store className="h-4 w-4" /> Retiro o instalación en taller aliado en Cartagena
+                </p>
               </div>
 
               {fitsVehicle(p, active) ? (
@@ -422,7 +428,7 @@ function PartDetail({ part, onClose, onBuy }: { part: Part | null; onClose: () =
                   <ShieldCheck className="h-5 w-5 shrink-0 text-success" />
                   <div>
                     <p className="text-sm font-semibold text-success">Compatibilidad garantizada</p>
-                    <p className="text-sm text-muted-foreground">Encaja en tu {active.brand} {active.model} {active.year}. Si no, te devolvemos el dinero.</p>
+                    <p className="text-sm text-muted-foreground">Encaja en tu {formatVehicleName(active.brand, active.model)} {active.year}. Verificado directamente con el taller.</p>
                   </div>
                 </div>
               ) : (
@@ -452,9 +458,29 @@ function PartDetail({ part, onClose, onBuy }: { part: Part | null; onClose: () =
                   ))}
                 </div>
               </div>
+
+              {/* Taller asignado para retiro o instalación */}
+              <div className="rounded-xl border border-border bg-card p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-sm font-semibold text-foreground">{workshop.name}</span>
+                    {workshop.verified && <BadgeCheck className="h-4 w-4 text-primary" />}
+                  </div>
+                  <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                    {workshop.zone}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5 text-primary shrink-0" /> {workshop.address}, Cartagena
+                </p>
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Phone className="h-3.5 w-3.5 text-primary shrink-0" /> {workshop.phone}
+                </p>
+              </div>
+
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Truck className="h-4 w-4" />
-                {p.freeShipping ? "Envío gratis · llega en 2–4 días" : "Envío desde $12.900"}
+                <Store className="h-4 w-4 text-primary" />
+                <span>Contacto directo con el taller · Sin intermediación financiera</span>
               </div>
             </div>
             <div className="sticky bottom-0 flex items-center gap-3 border-t border-border bg-background/95 p-4 backdrop-blur">
@@ -467,8 +493,18 @@ function PartDetail({ part, onClose, onBuy }: { part: Part | null; onClose: () =
                   <Plus className="h-4 w-4" />
                 </button>
               </div>
-              <Button variant="cta" size="lg" className="h-12 flex-1 rounded-full" onClick={() => onBuy(qty)}>
-                Comprar ahora
+              <Button
+                variant="cta"
+                size="lg"
+                className="h-12 flex-1 rounded-full gap-2 shadow-soft"
+                onClick={() => {
+                  toast.success(`Solicitud enviada a ${workshop.name}`, {
+                    description: "Te contactarán para coordinar tu cita.",
+                  });
+                  onClose();
+                }}
+              >
+                <MessageCircle className="h-4 w-4" /> Contactar Taller Aliado
               </Button>
             </div>
           </>
