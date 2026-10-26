@@ -3,7 +3,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import {
   AlertTriangle,
-  Calendar,
   CheckCircle2,
   ChevronDown,
   Clock,
@@ -23,104 +22,18 @@ import { toast } from "sonner";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
-import { PARTS, WORKSHOPS, cop, formatVehicleName, type Brand, type MaintenanceRecord, type Vehicle } from "@/data/mock";
+import { PARTS, WORKSHOPS, cop, formatVehicleName, type MaintenanceRecord, type Vehicle } from "@/data/mock";
 import { useApp } from "@/lib/store";
 import { Img, PageHeader } from "@/components/motrick/shared";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/utils/supabase/client";
+import { getVehiculos, getRegistrosBitacora, saveRegistroBitacora, saveVehiculoDocs } from "@/services/bitacora.service";
 import { SponsoredCard, SPONSORED_ADS } from "@/components/motrick/SponsoredCard";
 
 const km = (n: number) => `${n.toLocaleString("es-CO")} km`;
 
-interface DbVehiculo {
-  id: number | string;
-  marca?: string | null;
-  modelo?: string | null;
-  ano?: number | string | null;
-  usuario_id?: string | null;
-  placa?: string | null;
-  kilometraje?: number | string | null;
-  motor?: string | null;
-  combustible?: string | null;
-  transmision?: string | null;
-  color?: string | null;
-  imagen_url?: string | null;
-  soat_vencimiento?: string | null;
-  tecno_vencimiento?: string | null;
-}
-
-interface DbRegistroBitacora {
-  id?: number | string;
-  fecha?: string | null;
-  descripcion_cambio?: string | null;
-  pieza_actualizada?: string | null;
-  vehiculo_id?: number | string | null;
-  repuesto_id?: number | string | null;
-  titulo?: string | null;
-  descripcion?: string | null;
-  kilometraje?: number | string | null;
-  taller?: string | null;
-  costo?: number | string | null;
-}
-
-// Transformación de datos de persistencia al modelo de vista
-function parseDbRecord(r: DbRegistroBitacora, currentVehicles: Vehicle[]): MaintenanceRecord {
-  const rawDesc = String(r.descripcion_cambio || "");
-  let title = r.titulo || "";
-  let description = r.descripcion || "";
-  let workshop = r.taller || "Torque Automotriz";
-  let odometerKm = Number(r.kilometraje) || 45000;
-  let cost = Number(r.costo) || 0;
-
-  // Extracción de metadatos de servicio
-  const bracketMatch = rawDesc.match(/\[(.*?)\]/);
-  let cleanText = rawDesc;
-  if (bracketMatch) {
-    cleanText = rawDesc.replace(bracketMatch[0], "").trim();
-    const meta = bracketMatch[1];
-    const tallerM = meta.match(/Taller:\s*([^|]+)/);
-    if (tallerM) workshop = tallerM[1].trim();
-    const kmM = meta.match(/Km:\s*(\d+)/);
-    if (kmM) odometerKm = Number(kmM[1]);
-    const costM = meta.match(/Costo:\s*\$?(\d+)/);
-    if (costM) cost = Number(costM[1]);
-  }
-
-  if (!title) {
-    if (cleanText.includes("—")) {
-      const parts = cleanText.split("—");
-      title = parts[0].trim();
-      description = parts.slice(1).join("—").trim();
-    } else if (cleanText.includes(":")) {
-      const parts = cleanText.split(":");
-      title = parts[0].trim();
-      description = parts.slice(1).join(":").trim();
-    } else {
-      title = cleanText || "Mantenimiento General";
-      description = "Mantenimiento preventivo completado.";
-    }
-  }
-
-  const vId = String(r.vehiculo_id);
-  const matchedV = currentVehicles.find((v) => v.id === vId || String(v.id) === String(r.vehiculo_id));
-  const finalVehicleId = matchedV ? matchedV.id : (currentVehicles[0]?.id || "v1");
-
-  return {
-    id: String(r.id),
-    vehicleId: finalVehicleId,
-    date: r.fecha ? String(r.fecha).slice(0, 10) : new Date().toISOString().slice(0, 10),
-    km: odometerKm,
-    title,
-    description: description || "Inspección técnica y ajustes del fabricante.",
-    workshop,
-    cost,
-    part: r.pieza_actualizada || undefined,
-  };
-}
-
 // Control de fechas límite y alertas de documentos reglamentarios
 function getExpiryStatus(dateStr?: string) {
-  if (!dateStr) return { status: "missing", days: null, text: "Sin registrar", color: "text-muted-foreground", bg: "bg-muted" };
+  if (!dateStr) return { status: "missing", days: null, text: "Sin registrar", color: "text-muted-foreground", bg: "bg-muted border-border", dot: "bg-muted-foreground" };
   const target = new Date(dateStr + "T00:00:00");
   const now = new Date();
   now.setHours(0, 0, 0, 0);
@@ -132,8 +45,21 @@ function getExpiryStatus(dateStr?: string) {
       days: Math.abs(diffDays),
       text: `Venció hace ${Math.abs(diffDays)} días`,
       badge: "Vencido",
-      color: "text-destructive",
-      bg: "bg-destructive/10 border-destructive/30",
+      color: "text-red-700 dark:text-red-300 border-red-500/40",
+      bg: "bg-red-500/10 border-red-500/30",
+      dot: "bg-red-500 animate-ping",
+      icon: AlertTriangle,
+    };
+  }
+  if (diffDays <= 15) {
+    return {
+      status: "urgent",
+      days: diffDays,
+      text: diffDays === 0 ? "¡Vence hoy!" : `¡Urgente! Vence en ${diffDays} días`,
+      badge: "¡Urgente!",
+      color: "text-red-700 dark:text-red-300 border-red-500/40",
+      bg: "bg-red-500/10 border-red-500/30",
+      dot: "bg-red-500 animate-pulse",
       icon: AlertTriangle,
     };
   }
@@ -143,8 +69,9 @@ function getExpiryStatus(dateStr?: string) {
       days: diffDays,
       text: `Vence en ${diffDays} días`,
       badge: "Por vencer",
-      color: "text-cta",
-      bg: "bg-cta/10 border-cta/30",
+      color: "text-amber-700 dark:text-amber-300 border-amber-500/40",
+      bg: "bg-amber-500/10 border-amber-500/30",
+      dot: "bg-amber-400 animate-pulse",
       icon: Clock,
     };
   }
@@ -153,8 +80,9 @@ function getExpiryStatus(dateStr?: string) {
     days: diffDays,
     text: `Vigente (${diffDays} días)`,
     badge: "Vigente",
-    color: "text-success",
-    bg: "bg-success-soft border-success/30",
+    color: "text-emerald-700 dark:text-emerald-300 border-emerald-500/40",
+    bg: "bg-emerald-500/10 border-emerald-500/30",
+    dot: "bg-emerald-400",
     icon: CheckCircle2,
   };
 }
@@ -169,89 +97,24 @@ export default function BitacoraPage() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Sincronización de vehículos y bitácora desde la base de datos
+  // Sincronización de vehículos y bitácora mediante la capa de servicios
   useEffect(() => {
     let activeEffect = true;
     async function loadBitacoraData() {
       setLoading(true);
       try {
-        const supabase = createClient();
-        const { data: vData, error: vErr } = await supabase.from("vehiculos").select("*");
-        let activeVehicles = storeVehicles;
-
-        if (!vErr && vData && vData.length > 0) {
-          // Deduplicar vehículos por placa para evitar repeticiones
-          const seenPlates = new Set<string>();
-          const uniqueVehicles = vData.filter((v: DbVehiculo) => {
-            const plate = (v.placa || "").trim().toUpperCase();
-            if (!plate || seenPlates.has(plate)) return false;
-            seenPlates.add(plate);
-            return true;
-          });
-
-          activeVehicles = uniqueVehicles.map((v: DbVehiculo) => {
-            let sExpiry = v.soat_vencimiento || "2026-11-15";
-            let tExpiry = v.tecno_vencimiento || "2027-03-20";
-            let hTecno = true;
-
-            try {
-              const stored = typeof window !== "undefined" ? localStorage.getItem("motrik_vehicles_docs") : null;
-              if (stored) {
-                const map = JSON.parse(stored);
-                if (map[String(v.id)]) {
-                  if (map[String(v.id)].soatExpiry !== undefined) sExpiry = map[String(v.id)].soatExpiry;
-                  if (map[String(v.id)].tecnoExpiry !== undefined) tExpiry = map[String(v.id)].tecnoExpiry;
-                  if (map[String(v.id)].hasTecno !== undefined) hTecno = map[String(v.id)].hasTecno;
-                }
-              }
-            } catch (e) {
-              console.warn("Error rehidratando documentos:", e);
-            }
-
-            return {
-              id: String(v.id),
-              brand: (v.marca || "Toyota") as Brand,
-              model: v.modelo || "Vehículo",
-              year: Number(v.ano) || 2022,
-              plate: v.placa || `COL-${String(v.id).padStart(3, "0")}`,
-              odometer: Number(v.kilometraje) || 48230,
-              engine: v.motor || "2.0L Skyactiv-G",
-              fuel: v.combustible || "Gasolina",
-              transmission: v.transmision || "Automática 6V",
-              color: v.color || "Gris Machine",
-              image: v.imagen_url || (String(v.marca).toLowerCase().includes("toyota") ? "/assets/car2.jpg" : "/assets/car1.jpg"),
-              soatExpiry: sExpiry,
-              tecnoExpiry: tExpiry,
-              hasTecno: hTecno,
-            };
-          });
-          if (activeEffect) {
-            setVehicles(activeVehicles);
-            setActiveId(activeVehicles[0].id);
-          }
+        const vList = await getVehiculos();
+        if (activeEffect) {
+          setVehicles(vList);
+          setActiveId(vList[0]?.id || "v1");
         }
 
-        const { data: rData, error: rErr } = await supabase
-          .from("registros_bitacora")
-          .select("*")
-          .order("fecha", { ascending: false });
-
-        if (!activeEffect) return;
-
-        if (!rErr && rData && rData.length > 0) {
-          // Deduplicar registros de bitácora por fecha, título y kilometraje
-          const seenRecords = new Set<string>();
-          const uniqueRecords = rData.filter((r: DbRegistroBitacora) => {
-            const key = `${r.vehiculo_id}-${r.titulo}-${r.fecha}-${r.kilometraje}`;
-            if (seenRecords.has(key)) return false;
-            seenRecords.add(key);
-            return true;
-          });
-          const mappedRecords = uniqueRecords.map((r: DbRegistroBitacora) => parseDbRecord(r, activeVehicles));
-          setRecords(mappedRecords);
+        const rList = await getRegistrosBitacora(vList);
+        if (activeEffect) {
+          setRecords(rList);
         }
       } catch (err) {
-        console.error("Error al sincronizar bitácora:", err);
+        console.error("[BitacoraPage] Error al sincronizar bitácora:", err);
       } finally {
         if (activeEffect) setLoading(false);
       }
@@ -261,7 +124,7 @@ export default function BitacoraPage() {
     return () => {
       activeEffect = false;
     };
-  }, [storeVehicles]);
+  }, []);
 
   const active = vehicles.find((v) => v.id === activeId) ?? vehicles[0] ?? storeActive;
 
@@ -284,31 +147,8 @@ export default function BitacoraPage() {
     setVehicles((prev) => prev.map((v) => (v.id === id ? { ...v, ...data } : v)));
     // 2. Actualizar store global
     updateVehicle(id, data);
-    // 3. Persistir en localStorage
-    try {
-      const stored = localStorage.getItem("motrik_vehicles_docs");
-      const map = stored ? JSON.parse(stored) : {};
-      map[id] = { ...(map[id] || {}), ...data };
-      localStorage.setItem("motrik_vehicles_docs", JSON.stringify(map));
-    } catch (e) {
-      console.warn("Error guardando en localStorage:", e);
-    }
-    // 4. Intentar persistencia en Supabase
-    try {
-      const supabase = createClient();
-      const numId = Number(id);
-      if (!isNaN(numId)) {
-        await supabase
-          .from("vehiculos")
-          .update({
-            soat_vencimiento: data.soatExpiry,
-            tecno_vencimiento: data.tecnoExpiry,
-          })
-          .eq("id", numId);
-      }
-    } catch (e) {
-      console.warn("Error guardando en Supabase:", e);
-    }
+    // 3. Persistir en localStorage y Supabase mediante la capa de servicios
+    await saveVehiculoDocs(id, data);
   };
 
   const list = records.filter((r) => String(r.vehicleId) === String(active.id)).sort((a, b) => b.date.localeCompare(a.date));
@@ -322,13 +162,13 @@ export default function BitacoraPage() {
       <PageHeader
         eyebrow="Mi Garaje"
         title="Bitácora de mantenimiento y documentos"
-        subtitle="Historial técnico, kilometraje y recordatorios de SOAT y Tecnomecánica."
+        subtitle="Historial técnico, odómetro digital y control semafórico de SOAT y Tecnomecánica."
       >
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="lg" className="h-11 rounded-full" onClick={() => setOpenDocs(true)}>
+          <Button variant="outline" size="lg" className="h-11 rounded-full shadow-sm" onClick={() => setOpenDocs(true)}>
             <FileCheck2 className="h-4 w-4 mr-1 text-primary" /> SOAT & Tecnomecánica
           </Button>
-          <Button variant="cta" size="lg" className="h-11 rounded-full" onClick={() => setOpenMaintenance(true)}>
+          <Button variant="cta" size="lg" className="h-11 rounded-full shadow-sm" onClick={() => setOpenMaintenance(true)}>
             <Plus className="h-4 w-4 mr-1" /> Registrar Mantenimiento
           </Button>
         </div>
@@ -340,14 +180,14 @@ export default function BitacoraPage() {
             key={v.id}
             onClick={() => handleSelectVehicle(v.id)}
             className={cn(
-              "flex shrink-0 items-center gap-3 rounded-2xl border p-2 pr-5 text-left transition-all",
-              v.id === active.id ? "border-foreground bg-card shadow-soft" : "border-border opacity-70 hover:opacity-100"
+              "flex shrink-0 items-center gap-3 rounded-2xl border p-2 pr-5 text-left transition-all active:scale-[0.98]",
+              v.id === active.id ? "border-primary bg-card shadow-soft ring-1 ring-primary/20" : "border-border opacity-70 hover:opacity-100"
             )}
           >
-            <img src={v.image} alt="" className="h-12 w-16 rounded-xl object-cover" />
+            <img src={v.image} alt={v.model} className="h-12 w-16 rounded-xl object-cover" />
             <div>
-              <p className="text-sm font-semibold">{formatVehicleName(v.brand, v.model)}</p>
-              <p className="text-xs text-muted-foreground">{v.year} · {v.plate}</p>
+              <p className="text-sm font-bold text-foreground">{formatVehicleName(v.brand, v.model)}</p>
+              <p className="text-xs text-muted-foreground font-mono">{v.year} · {v.plate}</p>
             </div>
           </button>
         ))}
@@ -363,13 +203,13 @@ export default function BitacoraPage() {
           >
             <Img src={active.image} alt={active.model} className="aspect-[16/10]" />
             <div className="p-5">
-              <h2 className="text-xl font-semibold">{formatVehicleName(active.brand, active.model)} {active.year}</h2>
+              <h2 className="text-xl font-bold">{formatVehicleName(active.brand, active.model)} {active.year}</h2>
               <p className="text-sm text-muted-foreground">Placa {active.plate} · {active.color}</p>
-              <div className="mt-5 rounded-xl bg-gradient-ink p-4 text-ink-foreground">
-                <p className="flex items-center gap-1.5 text-xs uppercase tracking-wider opacity-70">
+              <div className="mt-5 rounded-2xl bg-gradient-ink p-4 text-ink-foreground shadow-sm">
+                <p className="flex items-center gap-1.5 text-xs uppercase tracking-wider opacity-75">
                   <Gauge className="h-3.5 w-3.5" /> Odómetro actual
                 </p>
-                <p className="mt-1 font-mono text-3xl font-semibold tracking-tight">
+                <p className="mt-1 font-mono text-3xl font-bold tracking-tight">
                   {active.odometer.toLocaleString("es-CO")}
                   <span className="ml-1 text-base opacity-60">km</span>
                 </p>
@@ -390,26 +230,27 @@ export default function BitacoraPage() {
               </dl>
               <div className="mt-5 grid grid-cols-2 gap-3 border-t border-border pt-4">
                 <div>
-                  <p className="text-xs text-muted-foreground">Servicios</p>
-                  <p className="text-xl font-semibold">{list.length}</p>
+                  <p className="text-xs text-muted-foreground font-medium">Servicios</p>
+                  <p className="text-2xl font-bold">{list.length}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground">Invertido</p>
-                  <p className="text-xl font-semibold">{cop(spent)}</p>
+                  <p className="text-xs text-muted-foreground font-medium">Invertido</p>
+                  <p className="text-2xl font-bold text-foreground">{cop(spent)}</p>
                 </div>
               </div>
             </div>
           </motion.aside>
 
+          {/* Tarjetas Semáforo de Papeles y Vencimientos */}
           <div className="rounded-2xl border border-border bg-card p-5 shadow-soft">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="h-5 w-5 text-primary" />
-                <h3 className="font-semibold text-base">Papeles y Vencimientos</h3>
+                <h3 className="font-bold text-base">Papeles y Vencimientos</h3>
               </div>
               <button
                 onClick={() => setOpenDocs(true)}
-                className="text-xs text-primary font-medium hover:underline flex items-center gap-1"
+                className="text-xs text-primary font-semibold hover:underline flex items-center gap-1"
               >
                 <Edit3 className="h-3 w-3" /> Editar
               </button>
@@ -419,14 +260,15 @@ export default function BitacoraPage() {
               <div className={cn("p-3.5 rounded-xl border transition-all", soatStatus.bg)}>
                 <div className="flex items-start justify-between">
                   <div>
-                    <span className="text-xs uppercase font-bold tracking-wider text-muted-foreground">SOAT</span>
-                    <p className="font-semibold text-sm mt-0.5">
+                    <span className="text-xs uppercase font-bold tracking-wider opacity-75">SOAT</span>
+                    <p className="font-bold text-sm mt-0.5">
                       {active.soatExpiry
                         ? new Date(active.soatExpiry + "T12:00").toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })
                         : "No configurado"}
                     </p>
                   </div>
-                  <span className={cn("text-xs px-2.5 py-0.5 rounded-full font-semibold border flex items-center gap-1", soatStatus.color)}>
+                  <span className={cn("text-xs px-2.5 py-0.5 rounded-full font-semibold border flex items-center gap-1.5 shadow-sm", soatStatus.color)}>
+                    <span className={cn("h-2 w-2 rounded-full", soatStatus.dot)} />
                     {soatStatus.text}
                   </span>
                 </div>
@@ -436,14 +278,15 @@ export default function BitacoraPage() {
                 <div className={cn("p-3.5 rounded-xl border transition-all", tecnoStatus.bg)}>
                   <div className="flex items-start justify-between">
                     <div>
-                      <span className="text-xs uppercase font-bold tracking-wider text-muted-foreground">Tecnomecánica</span>
-                      <p className="font-semibold text-sm mt-0.5">
+                      <span className="text-xs uppercase font-bold tracking-wider opacity-75">Tecnomecánica</span>
+                      <p className="font-bold text-sm mt-0.5">
                         {active.tecnoExpiry
                           ? new Date(active.tecnoExpiry + "T12:00").toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })
                           : "No configurado"}
                       </p>
                     </div>
-                    <span className={cn("text-xs px-2.5 py-0.5 rounded-full font-semibold border flex items-center gap-1", tecnoStatus.color)}>
+                    <span className={cn("text-xs px-2.5 py-0.5 rounded-full font-semibold border flex items-center gap-1.5 shadow-sm", tecnoStatus.color)}>
+                      <span className={cn("h-2 w-2 rounded-full", tecnoStatus.dot)} />
                       {tecnoStatus.text}
                     </span>
                   </div>
@@ -455,11 +298,11 @@ export default function BitacoraPage() {
               )}
             </div>
 
-            {(soatStatus.status === "warning" || soatStatus.status === "expired" || tecnoStatus.status === "warning" || tecnoStatus.status === "expired") && (
+            {(soatStatus.status === "urgent" || soatStatus.status === "expired" || tecnoStatus.status === "urgent" || tecnoStatus.status === "expired") && (
               <div className="mt-4 flex items-start gap-2.5 p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-xs text-destructive">
                 <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
                 <p>
-                  Tienes documentos próximos a vencer o vencidos. Renueva a tiempo para evitar sanciones y circular legalmente.
+                  Tienes documentos próximos a vencer o vencidos. Renueva a tiempo para evitar sanciones y circular legalmente bajo el Código Nacional de Tránsito.
                 </p>
               </div>
             )}
@@ -469,12 +312,12 @@ export default function BitacoraPage() {
         </div>
 
         <section>
-          <h3 className="mb-4 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-            Historial de Mantenimientos {loading && "(cargando...)"}
+          <h3 className="mb-4 text-sm font-bold uppercase tracking-wider text-muted-foreground">
+            Historial de Mantenimientos {loading && "(sincronizando...)"}
           </h3>
           {list.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border py-16 text-center text-sm text-muted-foreground">
-              Aún no hay registros para este vehículo.
+              Aún no hay registros para este vehículo en la bitácora técnica.
             </div>
           ) : (
             <ol className="relative space-y-4 before:absolute before:bottom-4 before:left-[19px] before:top-4 before:w-px before:bg-border">
@@ -497,33 +340,30 @@ export default function BitacoraPage() {
                       >
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="font-semibold">{r.title}</p>
-                            <p className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="h-3.5 w-3.5" />
-                                {new Date(r.date + "T12:00").toLocaleDateString("es-CO", { day: "numeric", month: "long", year: "numeric" })}
-                              </span>
-                              <span className="flex items-center gap-1"><Gauge className="h-3.5 w-3.5" />{km(r.km)}</span>
-                              <span className="flex items-center gap-1"><Wrench className="h-3.5 w-3.5" />{r.workshop}</span>
-                            </p>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs font-semibold text-primary">{km(r.km)}</span>
+                              <span className="text-xs text-muted-foreground">·</span>
+                              <span className="text-xs text-muted-foreground">{new Date(r.date + "T12:00").toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" })}</span>
+                            </div>
+                            <h4 className="mt-1 font-semibold text-base">{r.title}</h4>
+                            <p className="text-xs text-muted-foreground mt-0.5">{r.workshop}</p>
                           </div>
-                          <ChevronDown className={cn("mt-1 h-4 w-4 shrink-0 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm">{cop(r.cost)}</span>
+                            <ChevronDown className={cn("h-4 w-4 text-muted-foreground transition-transform", isOpen && "rotate-180")} />
+                          </div>
                         </div>
-                        {r.part && (
-                          <span className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground">
-                            <Package className="h-3 w-3" />{r.part}
-                          </span>
-                        )}
-                        <AnimatePresence>
-                          {isOpen && (
-                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                              <div className="mt-3 border-t border-border pt-3 text-sm">
-                                <p className="text-muted-foreground">{r.description}</p>
-                                <p className="mt-2 font-medium">Costo: {cop(r.cost)}</p>
+
+                        {isOpen && (
+                          <div className="mt-3 pt-3 border-t border-border text-xs text-muted-foreground space-y-2">
+                            <p>{r.description}</p>
+                            {r.part && (
+                              <div className="inline-flex items-center gap-1.5 rounded-full bg-accent px-2.5 py-1 text-accent-foreground font-medium">
+                                <Package className="h-3.5 w-3.5" /> Pieza instalada: {r.part}
                               </div>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
+                            )}
+                          </div>
+                        )}
                       </button>
                     </motion.li>
                   );
@@ -534,17 +374,17 @@ export default function BitacoraPage() {
         </section>
       </div>
 
-      <MaintenanceDialog
-        open={openMaintenance}
-        onOpenChange={setOpenMaintenance}
-        activeVehicle={active}
-        onAddRecord={handleRecordAdded}
-      />
       <DocumentModal
         vehicle={active}
         open={openDocs}
         onOpenChange={setOpenDocs}
         onSave={handleUpdateVehicleDocs}
+      />
+      <MaintenanceDialog
+        open={openMaintenance}
+        onOpenChange={setOpenMaintenance}
+        activeVehicle={active}
+        onAddRecord={handleRecordAdded}
       />
     </div>
   );
@@ -669,15 +509,31 @@ function MaintenanceDialog({
   const [hasPart, setHasPart] = useState(false);
   const [partQ, setPartQ] = useState("");
   const [part, setPart] = useState("");
-  const [err, setErr] = useState("");
   const [saving, setSaving] = useState(false);
-  const matches = useMemo(() => (partQ.trim() ? PARTS.filter((p) => `${p.name} ${p.brand}`.toLowerCase().includes(partQ.toLowerCase())).slice(0, 4) : []), [partQ]);
+  const [err, setErr] = useState("");
+
+  const matches = useMemo(() => {
+    if (!partQ.trim() || part) return [];
+    const q = partQ.toLowerCase();
+    return PARTS.filter((p) => p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q)).slice(0, 3);
+  }, [partQ, part]);
+
+  // Validación activa en tiempo real del odómetro (Defecto D1)
+  const kmNumber = f.km.trim() ? Number(f.km) : null;
+  const isOdometerInvalid = kmNumber !== null && !isNaN(kmNumber) && kmNumber < activeVehicle.odometer;
+
   const inputCls = "h-11 w-full rounded-lg border border-input bg-card px-3.5 text-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10";
 
   const submit = async () => {
+    if (!f.title.trim() || !f.km) {
+      setErr("Ingresa al menos el servicio y el kilometraje.");
+      return;
+    }
     const kmN = Number(f.km);
-    if (!f.title.trim()) return setErr("Describe el servicio realizado.");
-    if (!kmN) return setErr("Ingresa el kilometraje.");
+    if (!kmN || isNaN(kmN)) {
+      setErr("Kilometraje inválido.");
+      return;
+    }
     if (kmN < activeVehicle.odometer) {
       toast.error(`El kilometraje ingresado (${kmN} km) no puede ser inferior al actual (${activeVehicle.odometer} km).`);
       return;
@@ -690,42 +546,29 @@ function MaintenanceDialog({
     const partName = hasPart ? (part || partQ.trim() || undefined) : undefined;
 
     try {
-      const supabase = createClient();
-      // Persistencia del mantenimiento en la base de datos
-      const insertPayload = {
-        vehiculo_id: numVehiculoId,
-        fecha: new Date(f.date).toISOString(),
-        descripcion_cambio: `${f.title} — ${f.description.trim() || "Mantenimiento preventivo"} [Taller: ${f.workshop} | Km: ${kmN} | Costo: $${costN}]`,
-        pieza_actualizada: partName || null,
-      };
+      const { record: newRecord, persistedInDb } = await saveRegistroBitacora(
+        {
+          vehicleId: activeVehicle.id,
+          date: f.date,
+          km: kmN,
+          title: f.title.trim(),
+          description: f.description.trim() || "Sin notas adicionales.",
+          workshop: f.workshop,
+          cost: costN,
+          part: partName,
+        },
+        numVehiculoId
+      );
 
-      const { data, error } = await supabase
-        .from("registros_bitacora")
-        .insert(insertPayload)
-        .select();
-
-      if (error) {
-        toast.info("Mantenimiento guardado en memoria local", {
+      if (persistedInDb) {
+        toast.success("Mantenimiento registrado con éxito en base de datos", {
           description: `${f.title} · ${km(kmN)}`,
         });
       } else {
-        toast.success("Mantenimiento registrado con éxito", {
+        toast.info("Mantenimiento guardado en memoria local", {
           description: `${f.title} · ${km(kmN)}`,
         });
       }
-
-      const createdId = data && data[0]?.id ? String(data[0].id) : `m${Date.now()}`;
-      const newRecord: MaintenanceRecord = {
-        id: createdId,
-        vehicleId: activeVehicle.id,
-        date: f.date,
-        km: kmN,
-        title: f.title.trim(),
-        description: f.description.trim() || "Sin notas adicionales.",
-        workshop: f.workshop,
-        cost: costN,
-        part: partName,
-      };
 
       onAddRecord(newRecord);
       onOpenChange(false);
@@ -733,9 +576,8 @@ function MaintenanceDialog({
       setHasPart(false);
       setPartQ("");
       setPart("");
-    } catch (err: unknown) {
-      console.error("Error al registrar mantenimiento:", err);
-      const msg = err instanceof Error ? err.message : "Error al conectar con la base de datos";
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Error al registrar mantenimiento";
       setErr(msg);
     } finally {
       setSaving(false);
@@ -750,7 +592,42 @@ function MaintenanceDialog({
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-3">
             <label className="block"><span className="mb-1.5 block text-xs font-medium text-muted-foreground">Fecha</span><input type="date" className={inputCls} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} /></label>
-            <label className="block"><span className="mb-1.5 block text-xs font-medium text-muted-foreground">Kilometraje</span><input inputMode="numeric" className={cn(inputCls, "font-mono")} placeholder={String(activeVehicle.odometer)} value={f.km} onChange={(e) => setF({ ...f, km: e.target.value.replace(/\D/g, "") })} /></label>
+            <label className="block">
+              <span className="mb-1.5 block text-xs font-medium text-muted-foreground">Kilometraje</span>
+              <input
+                inputMode="numeric"
+                className={cn(
+                  inputCls,
+                  "font-mono",
+                  isOdometerInvalid && "border-destructive text-destructive focus:border-destructive focus:ring-destructive/20 bg-destructive/5"
+                )}
+                placeholder={String(activeVehicle.odometer)}
+                value={f.km}
+                onChange={(e) => setF({ ...f, km: e.target.value.replace(/\D/g, "") })}
+              />
+            </label>
+
+            {/* Alerta flotante animada en tiempo real contra odómetro regresivo (Defecto D1) */}
+            <AnimatePresence>
+              {isOdometerInvalid && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4, height: 0 }}
+                  animate={{ opacity: 1, y: 0, height: "auto" }}
+                  exit={{ opacity: 0, y: -4, height: 0 }}
+                  className="col-span-2 overflow-hidden"
+                >
+                  <div className="flex items-start gap-2.5 rounded-xl border border-destructive/40 bg-destructive/10 p-3 text-xs text-destructive shadow-sm">
+                    <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5 text-destructive" />
+                    <div>
+                      <p className="font-bold">⚠️ Kilometraje inválido detectado (Defecto D1)</p>
+                      <p className="mt-0.5 text-[11px] leading-relaxed opacity-90">
+                        El kilometraje ingresado ({kmNumber?.toLocaleString("es-CO")} km) es inferior al actual registrado ({activeVehicle.odometer.toLocaleString("es-CO")} km). Por consistencia cronológica, el nuevo servicio debe ser igual o superior.
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           <label className="block"><span className="mb-1.5 block text-xs font-medium text-muted-foreground">Servicio</span><input className={inputCls} placeholder="Ej. Cambio de aceite sintético" value={f.title} onChange={(e) => setF({ ...f, title: e.target.value })} /></label>
           <label className="block"><span className="mb-1.5 block text-xs font-medium text-muted-foreground">Descripción</span><textarea rows={3} className={cn(inputCls, "h-auto py-2.5")} placeholder="Detalles del trabajo realizado" value={f.description} onChange={(e) => setF({ ...f, description: e.target.value })} /></label>
@@ -789,8 +666,14 @@ function MaintenanceDialog({
           {err && <p className="text-sm text-destructive">{err}</p>}
           <div className="flex gap-2">
             <Button variant="outline" size="lg" className="h-11" onClick={() => onOpenChange(false)}>Cancelar</Button>
-            <Button variant="cta" size="lg" className="h-11 flex-1" onClick={submit} disabled={saving}>
-              {saving ? "Guardando en Supabase..." : "Guardar registro"}
+            <Button
+              variant="cta"
+              size="lg"
+              className="h-11 flex-1"
+              onClick={submit}
+              disabled={saving || isOdometerInvalid || !f.title.trim() || !f.km}
+            >
+              {saving ? "Guardando..." : isOdometerInvalid ? "Odómetro inválido" : "Guardar registro"}
             </Button>
           </div>
         </div>

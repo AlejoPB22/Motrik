@@ -2,18 +2,18 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { BadgeCheck, MapPin, MessageCircle, Minus, Phone, Plus, ShieldCheck, SlidersHorizontal, Store, X } from "lucide-react";
+import { BadgeCheck, MapPin, MessageCircle, Minus, Phone, Plus, ShieldAlert, ShieldCheck, SlidersHorizontal, Store, X } from "lucide-react";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CATALOG, CATEGORIES, PARTS, WORKSHOPS, cop, fitsVehicle, formatVehicleName, type Brand, type Category, type Part, type Workshop } from "@/data/mock";
+import { CATALOG, CATEGORIES, PARTS, WORKSHOPS, cop, fitsVehicle, formatVehicleName, type Brand, type Part, type Workshop } from "@/data/mock";
 import { useApp } from "@/lib/store";
 import { Chip, Img, PageHeader, Stars } from "@/components/motrick/shared";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { createClient } from "@/utils/supabase/client";
+import { getRepuestos } from "@/services/repuestos.service";
 import { SponsoredCard, SPONSORED_ADS } from "@/components/motrick/SponsoredCard";
 
 function getAssignedWorkshop(part: Part): Workshop {
@@ -26,99 +26,6 @@ function getAssignedWorkshop(part: Part): Workshop {
   }
   return WORKSHOPS[0];
 }
-
-function getPartFallbackImage(category: string): string {
-  const c = (category || "").toLowerCase();
-  if (c.includes("freno")) return "/assets/brake.jpg";
-  if (c.includes("aceite") || c.includes("lubricante")) return "/assets/oil.jpg";
-  if (c.includes("bater") || c.includes("eléctr") || c.includes("electr")) return "/assets/battery.jpg";
-  if (c.includes("suspens")) return "/assets/disc.jpg";
-  if (c.includes("filtro")) return "/assets/engine.jpg";
-  return "/assets/engine.jpg";
-}
-
-function parseDbFits(compatText: string): { brand: Brand; model: string; years: number[] }[] {
-  if (!compatText) return [];
-  const results: { brand: Brand; model: string; years: number[] }[] = [];
-  const brands: Brand[] = ["Toyota", "Mazda", "Chevrolet", "Ford", "Renault", "Kia"];
-  const lower = compatText.toLowerCase();
-
-  for (const b of brands) {
-    if (lower.includes(b.toLowerCase())) {
-      const models = Object.keys(CATALOG[b] || {});
-      let matched = false;
-      for (const m of models) {
-        if (lower.includes(m.toLowerCase())) {
-          results.push({
-            brand: b,
-            model: m,
-            years: CATALOG[b][m] || [2018, 2019, 2020, 2021, 2022, 2023],
-          });
-          matched = true;
-        }
-      }
-      if (!matched && models[0]) {
-        results.push({
-          brand: b,
-          model: models[0],
-          years: CATALOG[b][models[0]] || [2018, 2019, 2020, 2021, 2022, 2023],
-        });
-      }
-    }
-  }
-
-  if (results.length === 0 && lower.includes("universal")) {
-    for (const b of brands) {
-      for (const m of Object.keys(CATALOG[b])) {
-        results.push({ brand: b, model: m, years: CATALOG[b][m] });
-      }
-    }
-  }
-  return results;
-}
-
-interface DbRepuesto {
-  id: number | string;
-  nombre?: string;
-  marca?: string;
-  categoria_vehiculo?: string;
-  precio: number | string;
-  precio_anterior?: number | string | null;
-  calificacion?: number;
-  resenas_count?: number;
-  stock?: number;
-  imagen_url?: string | null;
-  imagenes?: string[] | null;
-  compatibilidad?: string;
-  especificaciones?: Record<string, string> | null;
-  envio_gratis?: boolean | null;
-}
-
-function mapDbRepuestoToPart(item: DbRepuesto): Part {
-  const category = (item.categoria_vehiculo || "Motor") as Category;
-  const image = item.imagen_url || getPartFallbackImage(category);
-  const compat = String(item.compatibilidad || "Universal");
-  const fits = parseDbFits(compat);
-
-  return {
-    id: String(item.id),
-    name: item.nombre || "Repuesto Automotriz",
-    brand: item.marca || "Original OEM",
-    category,
-    price: Number(item.precio) || 0,
-    oldPrice: item.precio_anterior ? Number(item.precio_anterior) : undefined,
-    rating: Number(item.calificacion) || 4.8,
-    reviews: Number(item.resenas_count) || 85,
-    stock: Number(item.stock) || 15,
-    images: item.imagenes ? (Array.isArray(item.imagenes) ? item.imagenes : [item.imagenes]) : [image],
-    fits,
-    specs: typeof item.especificaciones === "object" && item.especificaciones !== null
-      ? item.especificaciones
-      : { Compatibilidad: compat, "Categoría Vehicular": category, Garantía: "12 meses" },
-    freeShipping: item.envio_gratis ?? (Number(item.precio) >= 150000),
-  };
-}
-
 export default function RepuestosPage() {
   return (
     <Suspense fallback={<div className="p-8 text-center text-muted-foreground">Cargando catálogo...</div>}>
@@ -148,42 +55,18 @@ function RepuestosContent() {
     setYear(String(active.year));
   }, [active]);
 
-  // Carga de catálogo con filtros de categoría y compatibilidad
+  // Carga de catálogo mediante la capa de servicios
   useEffect(() => {
     let activeEffect = true;
     async function loadRepuestos() {
       setLoading(true);
       try {
-        const supabase = createClient();
-        let query = supabase.from("repuestos").select("*");
-
-        if (cat) {
-          query = query.ilike("categoria_vehiculo", `%${cat}%`);
-        }
-
-        // Búsqueda por modelo vehicular o piezas de compatibilidad universal
-        if (onlyFit && model) {
-          query = query.or(`compatibilidad.ilike.%${model}%,compatibilidad.ilike.%Universal%`);
-        }
-
-        const { data, error } = await query;
-
-        if (!activeEffect) return;
-
-        if (error) {
-          setParts(PARTS);
-        } else if (data && data.length > 0) {
-          const mapped = data.map(mapDbRepuestoToPart);
-          setParts(mapped);
-        } else {
-          if (cat || (onlyFit && model)) {
-            setParts([]);
-          } else {
-            setParts(PARTS);
-          }
+        const data = await getRepuestos({ category: cat, model, onlyFit });
+        if (activeEffect) {
+          setParts(data);
         }
       } catch (e) {
-        console.error("Error al consultar repuestos:", e);
+        console.error("[RepuestosPage] Error al cargar repuestos:", e);
         if (activeEffect) setParts(PARTS);
       } finally {
         if (activeEffect) setLoading(false);
@@ -199,6 +82,7 @@ function RepuestosContent() {
   const filterV = useMemo(() => {
     return brand && model && year ? { brand, model, year: Number(year) } : null;
   }, [brand, model, year]);
+
   const list = useMemo(() => {
     let l = parts.filter((p) => {
       const matchCat = !cat || p.category.toLowerCase() === cat.toLowerCase();
@@ -308,26 +192,45 @@ function RepuestosContent() {
                 transition={{ delay: i * 0.03 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => router.push(`/repuestos?part=${p.id}`)}
-                className="group overflow-hidden rounded-2xl border border-border bg-card text-left shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-lift"
+                className="group overflow-hidden rounded-2xl border border-border bg-card text-left shadow-soft transition-all hover:-translate-y-1 hover:shadow-lift"
               >
                 <div className="relative">
-                  <Img src={p.images[0] ?? ""} alt={p.name} className="aspect-square transition-transform duration-500 group-hover:scale-[1.03]" />
-                  {fit && (
-                    <span className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full bg-success px-2 py-1 text-[10px] font-semibold text-success-foreground shadow-sm">
-                      <BadgeCheck className="h-3 w-3" /> Compatible con tu auto
-                    </span>
-                  )}
+                  <Img src={p.images[0] ?? ""} alt={p.name} className="aspect-square transition-transform duration-500 group-hover:scale-[1.04]" />
+                  {/* Badge flotante animado con Framer Motion */}
+                  <motion.div
+                    initial={{ scale: 0.85, opacity: 0, y: -4 }}
+                    animate={{ scale: 1, opacity: 1, y: 0 }}
+                    transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                    className={cn(
+                      "absolute left-2.5 top-2.5 z-10 flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold shadow-md backdrop-blur-md transition-all",
+                      fit
+                        ? "bg-emerald-600/95 text-white border border-emerald-400/40 shadow-emerald-950/20"
+                        : "bg-zinc-900/85 text-zinc-300 border border-zinc-700/50"
+                    )}
+                  >
+                    {fit ? (
+                      <>
+                        <BadgeCheck className="h-3.5 w-3.5 text-emerald-200" />
+                        <span>100% Compatible</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldAlert className="h-3.5 w-3.5 text-zinc-400" />
+                        <span>No verificado</span>
+                      </>
+                    )}
+                  </motion.div>
                 </div>
                 <div className="p-3.5 md:p-4">
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{p.brand}</p>
-                  <p className="mt-0.5 line-clamp-2 min-h-[2.5rem] text-sm font-medium leading-snug">{p.name}</p>
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{p.brand}</p>
+                  <p className="mt-0.5 line-clamp-2 min-h-[2.5rem] text-sm font-semibold leading-snug group-hover:text-primary transition-colors">{p.name}</p>
                   <div className="mt-1.5 flex items-center gap-1.5">
                     <Stars value={p.rating} size={12} />
                     <span className="text-xs text-muted-foreground">({p.reviews})</span>
                   </div>
                   {p.oldPrice && <p className="mt-2 text-xs text-muted-foreground line-through">{cop(p.oldPrice)}</p>}
                   <div className={cn("flex items-baseline gap-2", !p.oldPrice && "mt-2")}>
-                    <span className="font-semibold text-lg">{cop(p.price)}</span>
+                    <span className="font-bold text-lg">{cop(p.price)}</span>
                     {p.oldPrice && <span className="text-xs font-semibold text-success">{Math.round((1 - p.price / p.oldPrice) * 100)}% OFF</span>}
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-xs">
@@ -411,8 +314,8 @@ function PartDetail({ part, onClose }: { part: Part | null; onClose: () => void 
             </div>
             <div className="space-y-6 p-6">
               <div>
-                <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{p.brand} · {p.category}</p>
-                <h2 className="mt-1 text-2xl font-semibold leading-tight">{p.name}</h2>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{p.brand} · {p.category}</p>
+                <h2 className="mt-1 text-2xl font-bold leading-tight">{p.name}</h2>
                 <div className="mt-2 flex items-center gap-2">
                   <Stars value={p.rating} />
                   <span className="text-sm text-muted-foreground">{p.rating} · {p.reviews} opiniones</span>

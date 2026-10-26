@@ -2,122 +2,17 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { BadgeCheck, Clock, MapPin, Phone, ShieldCheck, Star } from "lucide-react";
-import { Suspense, useMemo, useState } from "react";
+import { BadgeCheck, Clock, FileText, MapPin, Phone, ShieldCheck, Star } from "lucide-react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { SPECIALTIES, WORKSHOPS, ZONES, type Review, type Specialty, type Workshop } from "@/data/mock";
-import { Chip, Img, PageHeader, Stars } from "@/components/motrick/shared";
+import { SPECIALTIES, WORKSHOPS, ZONES, type Specialty, type Workshop } from "@/data/mock";
+import { Chip, Img, PageHeader } from "@/components/motrick/shared";
 import { toast } from "sonner";
-import { createClient } from "@/utils/supabase/client";
-import { useEffect } from "react";
+import { getDirectorio } from "@/services/directorio.service";
 import { SponsoredCard, SPONSORED_ADS } from "@/components/motrick/SponsoredCard";
-
-function getWorkshopImage(especialidad?: string | null): string {
-  const s = (especialidad || "").toLowerCase();
-  if (s.includes("freno")) return "/assets/wheel.jpg";
-  if (s.includes("motor")) return "/assets/engine.jpg";
-  if (s.includes("suspens")) return "/assets/disc.jpg";
-  if (s.includes("eléctr") || s.includes("electr")) return "/assets/battery.jpg";
-  return "/assets/shop.jpg";
-}
-
-interface DbValoracion {
-  id?: number | string;
-  puntuacion: number | string;
-  comentario?: string | null;
-  fecha?: string | null;
-  cliente?: { nombre?: string | null } | { nombre?: string | null }[] | null;
-}
-
-interface DbMecanico {
-  id: string | number;
-  especialidad?: string | null;
-  ubicacion?: string | null;
-  calificacion_promedio?: number | string | null;
-  foto_url?: string | null;
-  telefono?: string | null;
-  horario?: string | null;
-  anos_experiencia?: number | string | null;
-  descripcion?: string | null;
-  usuarios?:
-    | {
-        nombre?: string | null;
-        correo?: string | null;
-      }
-    | {
-        nombre?: string | null;
-        correo?: string | null;
-      }[]
-    | null;
-  valoraciones?: DbValoracion[] | null;
-}
-
-function mapDbMecanicoToWorkshop(m: DbMecanico): Workshop {
-  const userObj = Array.isArray(m.usuarios) ? m.usuarios[0] : m.usuarios;
-  const nombreTaller = userObj?.nombre || "Taller Especializado Motrick";
-  const ubicacionStr = m.ubicacion || "Manga · Calle Real #24-15";
-  const parts = ubicacionStr.split(/[·,]/);
-  const zone = parts[0]?.trim() || "Cartagena";
-  const address = parts.slice(1).join(",").trim() || ubicacionStr;
-
-  // Promedio de calificaciones calculadas desde valoraciones
-  const vals = Array.isArray(m.valoraciones) ? m.valoraciones : [];
-  let avgRating = Number(m.calificacion_promedio) || 5.0;
-  if (vals.length > 0) {
-    const sum = vals.reduce((acc: number, v: DbValoracion) => acc + (Number(v.puntuacion) || 5), 0);
-    avgRating = Number((sum / vals.length).toFixed(1));
-  }
-
-  const reviewCount = vals.length > 0 ? vals.length : (Number(m.calificacion_promedio) ? 14 : 0);
-
-  const reviews: Review[] = vals.length > 0
-    ? vals.map((v: DbValoracion, idx: number) => {
-        const cObj = Array.isArray(v.cliente) ? v.cliente[0] : v.cliente;
-        return {
-          id: String(v.id || idx),
-          author: cObj?.nombre || `Conductor Motrick #${idx + 1}`,
-          avatar: `https://i.pravatar.cc/80?img=${(idx % 30) + 1}`,
-          date: v.fecha ? String(v.fecha).slice(0, 10) : "2026-09-18",
-          rating: Number(v.puntuacion) || 5,
-          text: v.comentario || "Excelente servicio, diagnóstico claro y repuestos de primera calidad.",
-          vehicle: "Vehículo verificado",
-        };
-      })
-    : [
-        {
-          id: `r-default-${m.id}`,
-          author: "Cliente Verificado",
-          avatar: "https://i.pravatar.cc/80?img=12",
-          date: "2026-09-15",
-          rating: Math.round(avgRating),
-          text: "Excelente servicio técnico y cumplimiento con el tiempo pactado.",
-          vehicle: "Mazda 3",
-        },
-      ];
-
-  const specList: Specialty[] = m.especialidad
-    ? (m.especialidad.split(/[,;/]+/).map((s: string) => s.trim()) as Specialty[])
-    : ["Mantenimiento preventivo"];
-
-  return {
-    id: String(m.id),
-    name: nombreTaller,
-    zone,
-    address,
-    image: m.foto_url || getWorkshopImage(m.especialidad),
-    verified: true,
-    specialties: specList,
-    rating: avgRating,
-    reviewCount: Math.max(reviewCount, 1),
-    hours: m.horario || "Lun–Sáb 7:30–18:00",
-    phone: m.telefono || "+57 605 660 7788",
-    years: Number(m.anos_experiencia) || 12,
-    about: m.descripcion || `Taller especializado en ${m.especialidad || "mantenimiento automotriz"} con técnicos calificados en Cartagena.`,
-    reviews,
-  };
-}
+import { cn } from "@/lib/utils";
 
 export default function DirectorioPage() {
   return (
@@ -140,63 +35,18 @@ function DirectorioContent() {
   const [workshops, setWorkshops] = useState<Workshop[]>(WORKSHOPS);
   const [loading, setLoading] = useState(true);
 
-  // Carga de directorio de talleres con valoraciones y datos de contacto
+  // Carga de directorio de talleres mediante la capa de servicios
   useEffect(() => {
     let activeEffect = true;
     async function loadDirectorio() {
       setLoading(true);
       try {
-        const supabase = createClient();
-        let query = supabase.from("mecanicos").select(`
-          id,
-          especialidad,
-          ubicacion,
-          calificacion_promedio,
-          foto_url,
-          telefono,
-          usuarios (
-            nombre,
-            correo
-          ),
-          valoraciones (
-            id,
-            puntuacion,
-            comentario,
-            fecha,
-            cliente:usuarios!valoraciones_cliente_id_fkey (
-              nombre
-            )
-          )
-        `);
-
-        if (specs.length === 1) {
-          query = query.ilike("especialidad", `%${specs[0]}%`);
-        }
-
-        const { data, error } = await query;
-
-        if (!activeEffect) return;
-
-        if (error) {
-          // Fallback a consulta simple si existen restricciones en relaciones
-          const simple = await supabase.from("mecanicos").select("*, usuarios(nombre, correo)");
-          if (!simple.error && simple.data && simple.data.length > 0) {
-            setWorkshops(simple.data.map(mapDbMecanicoToWorkshop));
-          } else {
-            setWorkshops(WORKSHOPS);
-          }
-        } else if (data && data.length > 0) {
-          const mapped = data.map(mapDbMecanicoToWorkshop);
-          setWorkshops(mapped);
-        } else {
-          if (specs.length > 0) {
-            setWorkshops([]);
-          } else {
-            setWorkshops(WORKSHOPS);
-          }
+        const data = await getDirectorio({ specialties: specs, zone });
+        if (activeEffect) {
+          setWorkshops(data);
         }
       } catch (e) {
-        console.error("Error en conexión con Supabase en Directorio:", e);
+        console.error("[DirectorioPage] Error al cargar talleres:", e);
         if (activeEffect) setWorkshops(WORKSHOPS);
       } finally {
         if (activeEffect) setLoading(false);
@@ -207,7 +57,7 @@ function DirectorioContent() {
     return () => {
       activeEffect = false;
     };
-  }, [specs]);
+  }, [specs, zone]);
 
   const list = useMemo(
     () =>
@@ -215,58 +65,82 @@ function DirectorioContent() {
         const matchZone = zone === "all" || w.zone.toLowerCase().includes(zone.toLowerCase());
         const matchTop = !top || w.rating >= 4;
         const matchVerified = !onlyVerified || w.verified;
-        const matchSpecs = specs.length === 0 || specs.every((s) => w.specialties.some((ws) => ws.toLowerCase().includes(s.toLowerCase())));
+        const matchSpecs =
+          specs.length === 0 ||
+          specs.every((s) => w.specialties.some((ws) => ws.toLowerCase().includes(s.toLowerCase())));
         return matchZone && matchTop && matchVerified && matchSpecs;
       }),
-    [workshops, specs, zone, top, onlyVerified],
+    [workshops, zone, top, onlyVerified, specs]
   );
 
-  const selected = workshops.find((w) => String(w.id) === String(shopParam)) ?? WORKSHOPS.find((w) => String(w.id) === String(shopParam)) ?? null;
-  const toggle = (s: Specialty) => setSpecs((p) => (p.includes(s) ? p.filter((x) => x !== s) : [...p, s]));
+  const selected =
+    workshops.find((w) => String(w.id) === String(shopParam)) ??
+    WORKSHOPS.find((w) => String(w.id) === String(shopParam)) ??
+    null;
+
+  const toggleSpec = (s: Specialty) => {
+    setSpecs((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
+  };
 
   return (
     <div>
       <PageHeader
-        eyebrow="Directorio"
-        title="Talleres y mecánicos verificados"
-        subtitle="Talleres evaluados por la comunidad de conductores Motrick en Cartagena."
+        eyebrow="Directorio & Red de Confianza"
+        title="Talleres mecánicos verificados"
+        subtitle="Compara talleres por zona, especialidad y opiniones auditadas de otros conductores en Cartagena."
       >
-        <Button
-          variant="outline"
-          size="lg"
-          className="h-11 rounded-full gap-2 border-primary/40 hover:border-primary"
-          onClick={() => setOpenVerification(true)}
-        >
-          <ShieldCheck className="h-4 w-4 text-primary" /> Soy Mecánico / Verificar Taller
+        <Button variant="outline" size="sm" className="rounded-full gap-1.5 shadow-sm" onClick={() => setOpenVerification(true)}>
+          <ShieldCheck className="h-4 w-4 text-primary" /> ¿Tienes un taller? Verifícate (Ley 1480)
         </Button>
       </PageHeader>
 
+      {/* Barra de Filtros Clean Grid */}
       <div className="mb-6 space-y-3 rounded-2xl border border-border bg-card p-4 shadow-soft">
-        <div className="flex gap-2 overflow-x-auto pb-0.5">
-          {SPECIALTIES.map((s) => <Chip key={s} active={specs.includes(s)} onClick={() => toggle(s)}>{s}</Chip>)}
-        </div>
         <div className="flex flex-wrap items-center gap-2">
           <Select value={zone} onValueChange={setZone}>
-            <SelectTrigger className="h-10 w-[180px] rounded-full">
-              <MapPin className="h-4 w-4 mr-1 text-muted-foreground" />
-              <SelectValue />
+            <SelectTrigger className="h-10 w-[170px] rounded-full">
+              <SelectValue placeholder="Zona de Cartagena" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todas las zonas</SelectItem>
-              {ZONES.map((z) => <SelectItem key={z} value={z}>{z}</SelectItem>)}
+              {ZONES.map((z) => (
+                <SelectItem key={z} value={z}>
+                  {z}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
-          <Chip active={top} onClick={() => setTop(!top)}>
-            <Star className="h-3.5 w-3.5 mr-1" /> 4+ estrellas
-          </Chip>
-          <Chip active={onlyVerified} onClick={() => setOnlyVerified(!onlyVerified)}>
-            <BadgeCheck className="h-3.5 w-3.5 mr-1 text-primary" /> Solo verificados
-          </Chip>
-          {(specs.length > 0 || zone !== "all" || top || onlyVerified) && (
-            <button
-              onClick={() => { setSpecs([]); setZone("all"); setTop(false); setOnlyVerified(false); }}
-              className="ml-auto text-sm font-medium text-primary hover:underline"
-            >
+
+          <button
+            onClick={() => setTop(!top)}
+            className={cn(
+              "flex h-10 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-all active:scale-[0.98]",
+              top ? "border-amber-400 bg-amber-400/10 text-amber-700 dark:text-amber-300 font-semibold" : "border-border text-muted-foreground hover:bg-accent"
+            )}
+          >
+            <Star className="h-4 w-4 fill-amber-400 text-amber-400" /> 4.0 o más
+          </button>
+
+          <button
+            onClick={() => setOnlyVerified(!onlyVerified)}
+            className={cn(
+              "flex h-10 items-center gap-1.5 rounded-full border px-4 text-sm font-medium transition-all active:scale-[0.98]",
+              onlyVerified ? "border-primary bg-primary/10 text-primary font-semibold" : "border-border text-muted-foreground hover:bg-accent"
+            )}
+          >
+            <BadgeCheck className="h-4 w-4" /> Solo verificados
+          </button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/60">
+          <span className="text-xs font-semibold text-muted-foreground mr-1">Especialidad técnica:</span>
+          {SPECIALTIES.map((s) => (
+            <Chip key={s} active={specs.includes(s)} onClick={() => toggleSpec(s)}>
+              {s}
+            </Chip>
+          ))}
+          {specs.length > 0 && (
+            <button onClick={() => setSpecs([])} className="text-xs text-primary font-medium hover:underline ml-1">
               Limpiar filtros
             </button>
           )}
@@ -274,129 +148,200 @@ function DirectorioContent() {
       </div>
 
       <p className="mb-4 text-sm text-muted-foreground">
-        {loading ? "Cargando talleres..." : `${list.length} talleres encontrados`}
+        {loading ? "Consultando red de talleres…" : `${list.length} talleres especializados encontrados`}
       </p>
+
       {list.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border py-20 text-center">
-          <p className="font-medium">Ningún taller cumple todos los filtros</p>
-          <p className="mt-1 text-sm text-muted-foreground">Prueba quitando alguna especialidad o cambiando de zona.</p>
+          <p className="font-semibold text-lg">No se encontraron talleres con estos filtros</p>
+          <p className="mt-1 text-sm text-muted-foreground">Prueba seleccionando otra zona o limpiando las especialidades mecánicas.</p>
+          <Button
+            variant="outline"
+            className="mt-4"
+            onClick={() => {
+              setSpecs([]);
+              setZone("all");
+              setTop(false);
+              setOnlyVerified(false);
+            }}
+          >
+            Ver todos los talleres
+          </Button>
         </div>
       ) : (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+        /* Clean Grid Layout con elevación y sombras dinámicas */
+        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {list.map((w, i) => (
-            <motion.article
+            <motion.div
               key={w.id}
-              initial={{ opacity: 0, y: 12 }}
+              initial={{ opacity: 0, y: 14 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.04 }}
-              className="group overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-all hover:-translate-y-0.5 hover:shadow-lift"
+              onClick={() => router.push(`/directorio?shop=${w.id}`)}
+              className="group cursor-pointer flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-soft transition-all duration-300 hover:-translate-y-1 hover:shadow-lift hover:border-primary/40"
             >
               <div className="relative">
-                <Img src={w.image} alt={w.name} className="aspect-[16/10] transition-transform duration-500 group-hover:scale-[1.03]" />
+                <Img src={w.image} alt={w.name} className="aspect-[16/10] transition-transform duration-500 group-hover:scale-105" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
                 {w.verified && (
-                  <span className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-background/95 px-2.5 py-1 text-xs font-semibold text-primary shadow-sm backdrop-blur">
-                    <BadgeCheck className="h-3.5 w-3.5" /> Verificado
+                  <span className="absolute left-3 top-3 flex items-center gap-1 rounded-full bg-background/90 px-2.5 py-1 text-xs font-semibold shadow-sm backdrop-blur border border-primary/20">
+                    <BadgeCheck className="h-3.5 w-3.5 text-primary" /> Verificado
                   </span>
                 )}
+                <span className="absolute bottom-3 right-3 rounded-full bg-background/90 px-2.5 py-0.5 text-xs font-semibold backdrop-blur text-foreground">
+                  {w.zone}
+                </span>
               </div>
-              <div className="p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <h3 className="text-lg font-semibold">{w.name}</h3>
-                    <p className="mt-0.5 flex items-center gap-1 text-sm text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5" />{w.zone} · {w.address}
-                    </p>
+              <div className="p-5 flex-1 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="font-bold text-lg leading-snug group-hover:text-primary transition-colors">
+                      {w.name}
+                    </h3>
+                    <div className="flex shrink-0 items-center gap-1 font-bold text-sm bg-amber-500/10 px-2 py-0.5 rounded-md text-amber-600 dark:text-amber-400">
+                      <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                      <span>{w.rating}</span>
+                      <span className="text-xs text-muted-foreground font-normal">({w.reviewCount})</span>
+                    </div>
                   </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-xl font-semibold">{w.rating.toFixed(1)}</p>
-                    <p className="text-xs text-muted-foreground">{w.reviewCount} reseñas</p>
+
+                  <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5 shrink-0 text-primary" />
+                    <span className="truncate">{w.address}</span>
+                  </p>
+
+                  <p className="mt-2 text-xs text-muted-foreground line-clamp-2 leading-relaxed">{w.about}</p>
+
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {w.specialties.map((s) => (
+                      <span key={s} className="rounded-md bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                        {s}
+                      </span>
+                    ))}
                   </div>
                 </div>
-                <Stars value={w.rating} className="mt-2" />
-                <div className="mt-4 flex flex-wrap gap-1.5">
-                  {w.specialties.map((s) => (
-                    <span key={s} className="rounded-full bg-accent px-2.5 py-1 text-xs font-medium text-accent-foreground">
-                      {s}
-                    </span>
-                  ))}
+
+                <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
+                  <span className="flex items-center gap-1 font-medium">
+                    <Clock className="h-3.5 w-3.5 text-muted-foreground" /> {w.hours}
+                  </span>
+                  <span className="font-semibold text-foreground/80">{w.years} años de trayectoria</span>
                 </div>
-                <Button
-                  variant="ink"
-                  className="mt-5 h-10 w-full rounded-full"
-                  onClick={() => router.push(`/directorio?shop=${w.id}`)}
-                >
-                  Ver Perfil & Reseñas
-                </Button>
               </div>
-            </motion.article>
+            </motion.div>
           ))}
         </div>
       )}
 
+      {/* Modal de Detalle de Taller */}
       <Dialog open={!!selected} onOpenChange={(o) => !o && router.push("/directorio")}>
-        <DialogContent className="max-h-[90vh] max-w-2xl gap-0 overflow-y-auto p-0">
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto p-0">
           {selected && (
-            <>
-              <Img src={selected.image} alt={selected.name} className="aspect-[21/9]" />
-              <div className="p-6">
-                <div className="flex items-center gap-2">
-                  <DialogTitle className="text-2xl font-semibold">{selected.name}</DialogTitle>
-                  {selected.verified && <BadgeCheck className="h-5 w-5 text-primary" />}
-                </div>
-                <p className="mt-2 text-sm text-muted-foreground">{selected.about}</p>
-                <div className="mt-4 grid gap-2 text-sm sm:grid-cols-3">
-                  <span className="flex items-center gap-2"><MapPin className="h-4 w-4 text-muted-foreground" />{selected.address}</span>
-                  <span className="flex items-center gap-2"><Clock className="h-4 w-4 text-muted-foreground" />{selected.hours}</span>
-                  <span className="flex items-center gap-2"><Phone className="h-4 w-4 text-muted-foreground" />{selected.phone}</span>
-                </div>
-                <div className="mt-5 flex items-center gap-5 rounded-xl bg-muted/60 p-4">
-                  <div className="text-center">
-                    <p className="text-4xl font-semibold">{selected.rating.toFixed(1)}</p>
-                    <Stars value={selected.rating} size={12} />
-                    <p className="mt-1 text-xs text-muted-foreground">{selected.reviewCount} reseñas</p>
+            <div>
+              <div className="relative">
+                <Img src={selected.image} alt={selected.name} className="aspect-[16/9]" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent" />
+                <div className="absolute bottom-4 left-5 right-5 text-white">
+                  <div className="flex items-center gap-2">
+                    <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-xs font-semibold backdrop-blur">
+                      {selected.zone}
+                    </span>
+                    {selected.verified && (
+                      <span className="flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 text-xs font-semibold text-primary-foreground shadow-sm">
+                        <BadgeCheck className="h-3.5 w-3.5" /> Verificado por Motrik (Ley 1480)
+                      </span>
+                    )}
                   </div>
-                  <div className="flex-1 space-y-1">
-                    {[5, 4, 3, 2, 1].map((n, i) => {
-                      const pct = [72, 18, 6, 3, 1][i];
-                      return (
-                        <div key={n} className="flex items-center gap-2 text-xs">
-                          <span className="w-3 text-muted-foreground">{n}</span>
-                          <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border">
-                            <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ delay: 0.1 + i * 0.05 }} className="h-full bg-star" />
+                  <h2 className="mt-2 text-2xl font-bold">{selected.name}</h2>
+                  <p className="mt-1 flex items-center gap-1.5 text-xs text-white/80">
+                    <MapPin className="h-3.5 w-3.5 text-primary" /> {selected.address}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-6 p-6">
+                <div className="grid grid-cols-3 gap-3 rounded-2xl border border-border bg-card p-4 text-center shadow-soft">
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium">Calificación</p>
+                    <p className="mt-1 flex items-center justify-center gap-1 font-bold text-xl text-foreground">
+                      <Star className="h-4 w-4 fill-amber-400 text-amber-400" /> {selected.rating}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium">Opiniones</p>
+                    <p className="mt-1 font-bold text-xl text-foreground">{selected.reviewCount}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground font-medium">Experiencia</p>
+                    <p className="mt-1 font-bold text-xl text-foreground">{selected.years} años</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-semibold tracking-tight">Acerca del taller</h4>
+                  <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">{selected.about}</p>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-semibold tracking-tight">Especialidades mecánicas</h4>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {selected.specialties.map((s) => (
+                      <span key={s} className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-foreground">
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-semibold tracking-tight">Contacto y Atención</h4>
+                  <div className="mt-2 space-y-2 text-sm text-muted-foreground">
+                    <p className="flex items-center gap-2">
+                      <Phone className="h-4 w-4 text-primary" /> {selected.phone}
+                    </p>
+                    <p className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-primary" /> {selected.hours}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="mb-3 text-sm font-semibold tracking-tight">Opiniones auditadas ({selected.reviews.length})</h4>
+                  <div className="space-y-3">
+                    {selected.reviews.map((r) => (
+                      <div key={r.id} className="rounded-xl border border-border bg-muted/30 p-3.5 text-sm">
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold">{r.author}</span>
+                          <div className="flex items-center gap-1 text-xs text-amber-500 font-bold">
+                            <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" /> {r.rating}
                           </div>
                         </div>
-                      );
-                    })}
+                        <p className="mt-1.5 text-muted-foreground text-xs leading-relaxed">{r.text}</p>
+                        <p className="mt-2 text-[11px] text-muted-foreground/75 font-mono">
+                          {r.date} · {r.vehicle}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <h3 className="mb-3 mt-6 text-sm font-semibold">Opiniones de clientes</h3>
-                <div className="space-y-4">
-                  {selected.reviews.map((r) => (
-                    <div key={r.id} className="border-b border-border pb-4 last:border-0">
-                      <div className="flex items-center gap-3">
-                        <img src={r.avatar} alt="" className="h-9 w-9 rounded-full object-cover" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">{r.author}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {r.vehicle} · {new Date(r.date).toLocaleDateString("es-CO", { day: "numeric", month: "short", year: "numeric" })}
-                          </p>
-                        </div>
-                        <Stars value={r.rating} size={12} />
-                      </div>
-                      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{r.text}</p>
-                    </div>
-                  ))}
+
+                <div className="flex gap-2 pt-2 border-t border-border">
+                  <Button variant="outline" size="lg" className="h-11 flex-1" onClick={() => router.push("/directorio")}>
+                    Cerrar
+                  </Button>
+                  <Button
+                    variant="cta"
+                    size="lg"
+                    className="h-11 flex-1"
+                    onClick={() => {
+                      toast.success(`Conectando con ${selected.name}`, { description: selected.phone });
+                    }}
+                  >
+                    Contactar Taller
+                  </Button>
                 </div>
-                <Button
-                  variant="cta"
-                  size="lg"
-                  className="mt-4 h-12 w-full rounded-full"
-                  onClick={() => toast.success(`Solicitud enviada a ${selected.name}`, { description: "Te contactarán para coordinar tu cita." })}
-                >
-                  Agendar cita
-                </Button>
               </div>
-            </>
+            </div>
           )}
         </DialogContent>
       </Dialog>
@@ -415,10 +360,7 @@ function DirectorioContent() {
         </div>
       </div>
 
-      <VerificationRequestModal
-        open={openVerification}
-        onOpenChange={setOpenVerification}
-      />
+      <VerificationRequestModal open={openVerification} onOpenChange={setOpenVerification} />
     </div>
   );
 }
@@ -426,6 +368,7 @@ function DirectorioContent() {
 function VerificationRequestModal({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
   const [name, setName] = useState("");
   const [rut, setRut] = useState("");
+  const [matricula, setMatricula] = useState("");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   const [specialty, setSpecialty] = useState("Frenos");
@@ -436,17 +379,19 @@ function VerificationRequestModal({ open, onOpenChange }: { open: boolean; onOpe
       toast.error("Por favor completa los datos comerciales obligatorios.");
       return;
     }
-    toast.success("Solicitud de Verificación enviada (RF-05)", {
-      description: `El equipo de Motrick validará el RUT ${rut} y la sede física en menos de 24h.`,
+    toast.success("Solicitud de Verificación enviada (RF-05 / Ley 1480)", {
+      description: `El equipo auditor de Motrik validará el NIT ${rut} y la matrícula mercantil en menos de 24 horas.`,
     });
     setName("");
     setRut("");
+    setMatricula("");
     setAddress("");
     setPhone("");
     onOpenChange(false);
   };
 
-  const inputCls = "h-11 w-full rounded-lg border border-input bg-card px-3.5 text-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10";
+  const inputCls =
+    "h-11 w-full rounded-lg border border-input bg-card px-3.5 text-sm outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -454,44 +399,91 @@ function VerificationRequestModal({ open, onOpenChange }: { open: boolean; onOpe
         <DialogTitle className="text-xl flex items-center gap-2">
           <ShieldCheck className="h-5 w-5 text-primary" /> Verificación de Taller (RF-05)
         </DialogTitle>
-        <p className="-mt-2 text-sm text-muted-foreground">
-          Obtén la insignia de Taller Verificado y posiciónate prioritariamente ante miles de conductores en Cartagena.
+        <p className="-mt-2 text-xs text-muted-foreground leading-relaxed">
+          Inscribe tu taller mecánico para obtener la insignia de <strong>Taller Verificado</strong> y posicionarte ante miles de conductores en Cartagena bajo el marco del Art. 53 de la Ley 1480 de 2011.
         </p>
 
-        <form onSubmit={handleSubmit} className="space-y-3.5 pt-2">
+        <form onSubmit={handleSubmit} className="space-y-3 pt-2">
           <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1">Razón Social o Nombre Comercial</label>
-            <input className={inputCls} placeholder="Ej. Torque Automotriz S.A.S." value={name} onChange={(e) => setName(e.target.value)} required />
+            <label className="text-xs font-semibold text-foreground block mb-1">Razón Social o Nombre Comercial</label>
+            <input
+              className={inputCls}
+              placeholder="Ej. Torque Automotriz S.A.S."
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
           </div>
-          <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1">NIT o RUT Comercial (DIAN)</label>
-            <input className={inputCls} placeholder="Ej. 901.234.567-8" value={rut} onChange={(e) => setRut(e.target.value)} required />
-          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-medium text-muted-foreground block mb-1">Dirección Física</label>
-              <input className={inputCls} placeholder="Cra / Calle #" value={address} onChange={(e) => setAddress(e.target.value)} required />
+              <label className="text-xs font-semibold text-foreground block mb-1">NIT / RUT (DIAN)</label>
+              <input
+                className={inputCls}
+                placeholder="901.234.567-8"
+                value={rut}
+                onChange={(e) => setRut(e.target.value)}
+                required
+              />
             </div>
             <div>
-              <label className="text-xs font-medium text-muted-foreground block mb-1">Teléfono Móvil</label>
-              <input className={inputCls} placeholder="+57 300..." value={phone} onChange={(e) => setPhone(e.target.value)} required />
+              <label className="text-xs font-semibold text-foreground block mb-1">Matrícula Mercantil</label>
+              <input
+                className={inputCls}
+                placeholder="Cámara Comercio"
+                value={matricula}
+                onChange={(e) => setMatricula(e.target.value)}
+              />
             </div>
           </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-semibold text-foreground block mb-1">Dirección Física</label>
+              <input
+                className={inputCls}
+                placeholder="Cra 13 #54-21"
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-xs font-semibold text-foreground block mb-1">Teléfono Móvil</label>
+              <input
+                className={inputCls}
+                placeholder="+57 300 123 4567"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+              />
+            </div>
+          </div>
+
           <div>
-            <label className="text-xs font-medium text-muted-foreground block mb-1">Especialidad Principal</label>
+            <label className="text-xs font-semibold text-foreground block mb-1">Especialidad Técnica Principal</label>
             <select className={inputCls} value={specialty} onChange={(e) => setSpecialty(e.target.value)}>
-              {SPECIALTIES.map((s) => <option key={s} value={s}>{s}</option>)}
+              {SPECIALTIES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
             </select>
           </div>
-          <p className="text-[11px] text-muted-foreground leading-snug">
-            Nota legal: Al enviar este formulario declaras cumplir con los estándares técnicos y la idoneidad exigida por la Ley 1480 de 2011.
-          </p>
+
+          <div className="rounded-xl border border-border bg-muted/40 p-3 text-[11px] text-muted-foreground leading-relaxed">
+            <span className="font-semibold text-foreground flex items-center gap-1 mb-0.5">
+              <FileText className="h-3.5 w-3.5 text-primary" /> Marco de Responsabilidad (Ley 1480):
+            </span>
+            Motrik valida la existencia legal del taller sin intermediar contractualmente en el arreglo mecánico, preservando el rol de portal de contacto.
+          </div>
+
           <div className="flex gap-2 pt-2">
             <Button type="button" variant="outline" size="lg" className="h-11 flex-1" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
             <Button type="submit" variant="cta" size="lg" className="h-11 flex-1">
-              Enviar Solicitud
+              Enviar para Auditoría
             </Button>
           </div>
         </form>
