@@ -14,7 +14,7 @@ actor "Sistema Motrick\n(Gestión DB)" as Sys
 rectangle "Plataforma Motrick (MVP)" {
   ' Módulo Repuestos
   usecase "Buscar repuestos por vehículo" as UC_Repuestos
-  usecase "Simular compra de repuestos" as UC_Checkout
+  usecase "Contactar taller por WhatsApp" as UC_ContactoTaller
 
   ' Módulo Directorio & Verificación
   usecase "Filtrar mecánicos y talleres" as UC_Directorio
@@ -39,7 +39,7 @@ User --> UC_RegistrarBitacora
 User --> UC_Historial
 
 ' Relaciones internas (include / extend)
-UC_Checkout .> UC_Repuestos : <<extend>>
+UC_ContactoTaller .> UC_Repuestos : <<extend>>
 UC_VincularPieza .> UC_RegistrarBitacora : <<extend>>
 
 ' Relaciones del Mecánico / Taller
@@ -188,22 +188,37 @@ Frontend --> Usuario: Actualiza vista del control histórico
 deactivate Frontend
 @enduml
 
-Simulación de compra de repuestos (Mockup):
+Enlace directo con taller aliado para repuestos (WhatsApp / RNF-03):
 @startuml
-skinparam maxMessageSize 150
-actor Usuario
-participant "Interfaz\n(React)" as Frontend
+skinparam maxMessageSize 160
+skinparam shadowing false
+skinparam roundcorner 6
+skinparam defaultFontName "Segoe UI", Arial, sans-serif
 
-Usuario -> Frontend: Selecciona repuesto y hace clic en "Comprar"
+actor "Usuario\n(Cliente)" as Usuario
+participant "Interfaz\n(Next.js / Modal)" as Frontend
+participant "Servicio Directorio\n(Taller Asignado)" as Directorio
+participant "API Externa\n(WhatsApp)" as WhatsApp
+
+Usuario -> Frontend: Clic en "Contactar Taller" para repuesto
 activate Frontend
 
-Frontend --> Usuario: Despliega maqueta de pasarela de pago
+Frontend -> Directorio: getTallerAsignado(categoria, "Cartagena")
+activate Directorio
 
-Usuario -> Frontend: Ingresa datos de prueba (tarjeta simulada)
+Directorio --> Frontend: Retorna datos del taller (Nombre, WhatsApp, Sede)
+deactivate Directorio
 
-Frontend -> Frontend: Simula tiempo de procesamiento interno\n(Sin APIs financieras externas)
+Frontend --> Usuario: Despliega modal de contacto B2B (Sin pasarela de pago)
 
-Frontend --> Usuario: Muestra pantalla de éxito de transacción
+Usuario -> Frontend: Clic en "Iniciar Chat por WhatsApp"
+
+Frontend -> WhatsApp: Redirige con enlace wa.me (mensaje prellenado con pieza y auto)
+activate WhatsApp
+
+WhatsApp --> Usuario: Abre chat directo para coordinar adquisición e instalación
+deactivate WhatsApp
+
 deactivate Frontend
 @enduml
 Diagrama de Actividades

@@ -38,9 +38,9 @@
     <ellipse cx="280" cy="80" rx="75" ry="20" fill="#ffffff" stroke="#2563eb" stroke-width="1.4"/>
     <text x="280" y="84" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" fill="#0f172a" text-anchor="middle">Buscar repuestos por auto</text>
 
-    <!-- UC2: Simular Checkout (extend) -->
-    <ellipse cx="460" cy="80" rx="70" ry="20" fill="#eff6ff" stroke="#2563eb" stroke-width="1.4"/>
-    <text x="460" y="84" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="9.5" fill="#1e40af" text-anchor="middle">Simular compra repuestos</text>
+    <!-- UC2: Contactar Taller por WhatsApp (extend) -->
+    <ellipse cx="460" cy="80" rx="78" ry="20" fill="#eff6ff" stroke="#2563eb" stroke-width="1.4"/>
+    <text x="460" y="84" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="8.8" font-weight="600" fill="#1e40af" text-anchor="middle">Contactar taller por WhatsApp</text>
 
     <!-- UC3: Filtrar mecánicos -->
     <ellipse cx="280" cy="140" rx="75" ry="20" fill="#ffffff" stroke="#2563eb" stroke-width="1.4"/>
@@ -79,8 +79,8 @@
     <line x1="640" y1="260" x2="535" y2="340" stroke="#b91c1c" stroke-width="1.4"/>
 
     <!-- Relaciones extend con flechas dashed -->
-    <line x1="390" y1="80" x2="355" y2="80" stroke="#2563eb" stroke-width="1.2" stroke-dasharray="3 3"/>
-    <text x="375" y="73" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="8" fill="#2563eb" text-anchor="middle">&lt;&lt;extend&gt;&gt;</text>
+    <line x1="382" y1="80" x2="355" y2="80" stroke="#2563eb" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <text x="368" y="73" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="8" fill="#2563eb" text-anchor="middle">&lt;&lt;extend&gt;&gt;</text>
 
     <line x1="390" y1="260" x2="355" y2="260" stroke="#2563eb" stroke-width="1.2" stroke-dasharray="3 3"/>
     <text x="375" y="253" font-family="'Segoe UI', Helvetica, Arial, sans-serif" font-size="8" fill="#2563eb" text-anchor="middle">&lt;&lt;extend&gt;&gt;</text>

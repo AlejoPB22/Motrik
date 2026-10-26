@@ -184,7 +184,7 @@ flowchart LR
 
     subgraph "Plataforma Motrick (MVP)"
         UC1(["Buscar repuestos por vehículo"])
-        UC2(["Simular compra de repuestos"])
+        UC2(["Contactar taller por WhatsApp"])
         UC3(["Filtrar mecánicos y talleres"])
         UC4(["Consultar valoraciones"])
         UC5(["Solicitar verificación de taller"])
@@ -216,7 +216,7 @@ flowchart LR
 
 **Figura 1**  
 *Diagrama de Casos de Uso Actualizado con Módulo de Verificación (RF-05) y Rol Administrador*  
-*Nota.* Elaboración propia (2026) basada en los requerimientos del MVP de Motrick, incorporando relaciones `<<extend>>` para el checkout y la vinculación de piezas, e interacciones del actor Administrador y Mecánico bajo la Ley 1480 de 2011.
+*Nota.* Elaboración propia (2026) basada en los requerimientos del MVP de Motrick, incorporando relaciones `<<extend>>` para el contacto directo con talleres aliados por WhatsApp y la vinculación de piezas, e interacciones del actor Administrador y Mecánico bajo la Ley 1480 de 2011.
 
 ---
 

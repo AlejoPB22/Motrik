@@ -532,7 +532,7 @@ Aplicando los principios de la metodología \textbf{Feature-Driven Development (
 \section{Modelado UML y Matriz de Validación Metodológica}
 
 \subsection{Diagrama de Casos de Uso Actualizado (Figura 1)}
-El diagrama de casos de uso fue actualizado formalmente para incorporar el actor \textbf{Mecánico / Taller} (con el caso de uso \textit{Solicitar verificación de taller}) y el actor \textbf{Administrador} (con la moderación de directorio, catálogo y aprobación de insignias fiscales), así como las relaciones \texttt{<<extend>>} hacia el checkout y la vinculación de piezas en bitácora:
+El diagrama de casos de uso fue actualizado formalmente para incorporar el actor \textbf{Mecánico / Taller} (con el caso de uso \textit{Solicitar verificación de taller}) y el actor \textbf{Administrador} (con la moderación de directorio, catálogo y aprobación de insignias fiscales), así como las relaciones \texttt{<<extend>>} hacia el contacto directo por WhatsApp y la vinculación de piezas en bitácora:
 
 \begin{figure}[h!]
     \centering
@@ -540,7 +540,7 @@ El diagrama de casos de uso fue actualizado formalmente para incorporar el actor
     \caption{Diagrama de Casos de Uso Actualizado con Módulo de Verificación (RF-05) y Rol Administrador.}
     \label{fig:casos_uso}
 \end{figure}
-\figurenote{Elaboración propia (2026) basada en los requerimientos del MVP de Motrick, incorporando relaciones \texttt{<<extend>>} para el checkout y la vinculación de piezas, e interacciones del actor Administrador y Mecánico bajo la Ley 1480 de 2011.}
+\figurenote{Elaboración propia (2026) basada en los requerimientos del MVP de Motrick, incorporando relaciones \texttt{<<extend>>} para el contacto directo con talleres aliados por WhatsApp y la vinculación de piezas, e interacciones del actor Administrador y Mecánico bajo la Ley 1480 de 2011.}
 
 \newpage
 
@@ -589,7 +589,7 @@ Describen la interacción temporal y el intercambio de mensajes entre los compon
     \caption{Diagrama de Secuencia — Enlace Directo con Taller para Repuestos (RNF-03).}
     \label{fig:sec_checkout}
 \end{figure}
-\figurenote{Representación temporal de la maqueta de pago. Al tratarse de un entorno simulado, las respuestas del sistema hacia el usuario se ilustran como mensajes de retorno con línea discontinua sin consumir pasarelas bancarias externas. Elaboración propia.}
+\figurenote{Secuencia de interacción para la adquisición de repuestos mediante contacto directo B2B (RNF-03, Art. 53 de la Ley 1480 de 2011). El frontend consulta los datos del taller asignado en Cartagena y genera el enlace prellenado a la API de WhatsApp para coordinar la compra e instalación física, eliminando pasarelas financieras intermedias y la captura de tarjetas de crédito. Elaboración propia.}
 
 \vspace{0.3cm}
 

@@ -890,9 +890,9 @@ def build_html():
     <ellipse cx="280" cy="80" rx="75" ry="20" fill="#ffffff" stroke="#2563eb" stroke-width="1.4"/>
     <text x="280" y="84" font-family="'Segoe UI', sans-serif" font-size="9.5" fill="#0f172a" text-anchor="middle">Buscar repuestos por auto</text>
 
-    <!-- UC2: Simular Checkout (extend) -->
-    <ellipse cx="460" cy="80" rx="70" ry="20" fill="#eff6ff" stroke="#2563eb" stroke-width="1.4"/>
-    <text x="460" y="84" font-family="'Segoe UI', sans-serif" font-size="9.5" fill="#1e40af" text-anchor="middle">Simular compra repuestos</text>
+    <!-- UC2: Contactar taller por WhatsApp (extend) -->
+    <ellipse cx="460" cy="80" rx="78" ry="20" fill="#eff6ff" stroke="#2563eb" stroke-width="1.4"/>
+    <text x="460" y="84" font-family="'Segoe UI', sans-serif" font-size="8.8" font-weight="600" fill="#1e40af" text-anchor="middle">Contactar taller por WhatsApp</text>
 
     <!-- UC3: Filtrar mecánicos -->
     <ellipse cx="280" cy="140" rx="75" ry="20" fill="#ffffff" stroke="#2563eb" stroke-width="1.4"/>
@@ -931,8 +931,8 @@ def build_html():
     <line x1="640" y1="260" x2="535" y2="340" stroke="#b91c1c" stroke-width="1.4"/>
 
     <!-- Relaciones extend con flechas dashed -->
-    <line x1="390" y1="80" x2="355" y2="80" stroke="#2563eb" stroke-width="1.2" stroke-dasharray="3 3"/>
-    <text x="375" y="73" font-family="'Segoe UI', sans-serif" font-size="8" fill="#2563eb" text-anchor="middle">&lt;&lt;extend&gt;&gt;</text>
+    <line x1="382" y1="80" x2="355" y2="80" stroke="#2563eb" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <text x="368" y="73" font-family="'Segoe UI', sans-serif" font-size="8" fill="#2563eb" text-anchor="middle">&lt;&lt;extend&gt;&gt;</text>
 
     <line x1="390" y1="260" x2="355" y2="260" stroke="#2563eb" stroke-width="1.2" stroke-dasharray="3 3"/>
     <text x="375" y="253" font-family="'Segoe UI', sans-serif" font-size="8" fill="#2563eb" text-anchor="middle">&lt;&lt;extend&gt;&gt;</text>
@@ -940,7 +940,7 @@ def build_html():
 
   <div class="figure-caption">
     <span class="figure-title">Figura 1.</span> <em>Diagrama de Casos de Uso Actualizado con Módulo de Verificación (RF-05) y Rol Administrador.</em><br>
-    <em>Nota.</em> Elaboración propia (2026) basada en los requerimientos del MVP de Motrick, incorporando relaciones <code>&lt;&lt;extend&gt;&gt;</code> para el checkout y la vinculación de piezas, e interacciones del actor Administrador y Mecánico bajo la Ley 1480 de 2011.
+    <em>Nota.</em> Elaboración propia (2026) basada en los requerimientos del MVP de Motrick, incorporando relaciones <code>&lt;&lt;extend&gt;&gt;</code> para el contacto directo con talleres aliados por WhatsApp y la vinculación de piezas, e interacciones del actor Administrador y Mecánico bajo la Ley 1480 de 2011.
   </div>
 </div>
 
@@ -984,10 +984,10 @@ def build_html():
 <div class="page-break"></div>
 
 <div class="figure-container">
-  {"<img src='" + sec3_b64 + "' alt='Diagrama de Secuencia - Simulación de Compra' style='max-height: 330px; width: auto;' />" if sec3_b64 else ""}
+  {"<img src='" + sec3_b64 + "' alt='Diagrama de Secuencia - Enlace Directo con Taller para Repuestos (RNF-03)' style='max-height: 330px; width: auto;' />" if sec3_b64 else ""}
   <div class="figure-caption">
     <span class="figure-title">Figura 5.</span> <em>Diagrama de Secuencia — Enlace Directo con Taller para Repuestos (RNF-03).</em><br>
-    <em>Nota.</em> Representación temporal del flujo de consulta y enlace directo. Al tratarse de un portal de contacto B2B bajo el Art. 53 de la Ley 1480, no se consumen pasarelas financieras externas; el sistema transfiere los parámetros de la pieza directamente al canal de mensajería del taller en Cartagena. Elaboración propia.
+    <em>Nota.</em> Secuencia de interacción para la adquisición de repuestos mediante contacto directo B2B (RNF-03, Art. 53 de la Ley 1480 de 2011). El frontend consulta los datos del taller asignado en Cartagena y genera el enlace prellenado a la API de WhatsApp para coordinar la compra e instalación física, eliminando pasarelas financieras intermedias y la captura de tarjetas de crédito. Elaboración propia.
   </div>
 </div>
 
