@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import { AppProvider } from "@/lib/store";
 import { Header } from "@/components/motrick/Header";
+import { MotrickChatbot } from "@/components/motrick/MotrickChatbot";
 import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
@@ -22,7 +23,8 @@ export default function RootLayout({
           <main className="mx-auto max-w-7xl px-4 pb-24 pt-6 md:px-6 md:pb-16 md:pt-8">
             {children}
           </main>
-          <Toaster position="bottom-right" />
+          <MotrickChatbot />
+          <Toaster position="top-right" />
         </AppProvider>
       </body>
     </html>
